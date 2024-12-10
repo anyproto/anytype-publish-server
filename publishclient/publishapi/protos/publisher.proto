@@ -71,7 +71,9 @@ message UnPublishRequest {
   string objectId = 2;
 }
 
-message ListPublishesRequest {}
+message ListPublishesRequest {
+  string spaceId = 1;
+}
 
 message ListPublishesResponse {
   repeated Publish publishes = 1;
