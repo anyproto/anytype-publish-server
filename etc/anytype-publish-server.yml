@@ -1,0 +1,6 @@
+drpc:
+  stream:
+    maxMsgSizeMb: 256
+mongo:
+  connect: mongodb://localhost:27017
+  database: publish_test
