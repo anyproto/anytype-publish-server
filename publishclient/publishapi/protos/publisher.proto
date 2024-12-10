@@ -1,0 +1,78 @@
+syntax = "proto3";
+package client;
+
+option go_package = "publishclient/publishapi";
+
+enum ErrCodes {
+  Unexpected = 0;
+  NotFound = 1;
+  AccessDenied = 2;
+  UriNotUnique = 3;
+  ErrorOffset = 1100;
+}
+
+enum PublishStatus {
+  // PublishStatusCreated means publish is created but not uploaded yet
+  PublishStatusCreated = 0;
+  // PublishStatusCreated means publish is active
+  PublishStatusPublished = 1;
+}
+
+service WebPublisher {
+  rpc ResolveUri(ResolveUriRequest) returns (ResolveUriResponse);
+  rpc GetPublishStatus(GetPublishStatusRequest) returns (GetPublishStatusResponse);
+  rpc Publish(PublishRequest) returns (PublishResponse);
+  rpc UnPublish(UnPublishRequest) returns (Ok);
+  rpc ListPublishes(ListPublishesRequest) returns (ListPublishesResponse);
+}
+
+message ResolveUriRequest {
+  string uri = 1;
+}
+
+message ResolveUriResponse {
+  Publish publish = 1;
+}
+
+message Publish {
+  string spaceId = 1;
+  string objectId = 2;
+  string uti = 3;
+  PublishStatus status = 4;
+  string version = 5;
+  int64 timestamp = 6;
+  int64 size = 7;
+}
+
+message Ok {}
+
+message GetPublishStatusRequest {
+  string spaceId = 1;
+  string objectId = 2;
+}
+
+message GetPublishStatusResponse {
+  Publish publish = 1;
+}
+
+message PublishRequest {
+  string spaceId = 1;
+  string objectId = 2;
+  string uri = 3;
+  string version = 4;
+}
+
+message PublishResponse {
+  string uploadUrl = 1;
+}
+
+message UnPublishRequest {
+  string spaceId = 1;
+  string objectId = 2;
+}
+
+message ListPublishesRequest {}
+
+message ListPublishesResponse {
+  repeated Publish publishes = 1;
+}
