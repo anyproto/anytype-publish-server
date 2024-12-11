@@ -68,7 +68,7 @@ func toPublish(obj domain.ObjectWithPublish) *publishapi.Publish {
 	publish := &publishapi.Publish{
 		SpaceId:   obj.SpaceId,
 		ObjectId:  obj.ObjectId,
-		Uti:       obj.Uri,
+		Uri:       obj.Uri,
 		Timestamp: obj.Timestamp,
 	}
 	if obj.Publish != nil {
