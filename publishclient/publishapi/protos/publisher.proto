@@ -37,7 +37,7 @@ message ResolveUriResponse {
 message Publish {
   string spaceId = 1;
   string objectId = 2;
-  string uti = 3;
+  string uri = 3;
   PublishStatus status = 4;
   string version = 5;
   int64 timestamp = 6;
