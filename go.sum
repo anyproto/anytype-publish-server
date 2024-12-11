@@ -5,6 +5,7 @@ github.com/ahmetb/govvv v0.3.0 h1:YGLGwEyiUwHFy5eh/RUhdupbuaCGBYn5T5GWXp+WJB0=
 github.com/ahmetb/govvv v0.3.0/go.mod h1:4WRFpdWtc/YtKgPFwa1dr5+9hiRY5uKAL08bOlxOR6s=
 github.com/anyproto/any-sync v0.5.21 h1:+Qx69Pij3QbLh2nRZEamD2WaSSy1uWHlXGMCIFEiKW0=
 github.com/anyproto/any-sync v0.5.21/go.mod h1:K53/whh/9tmGbXrkPS59XyqWU3SaxhsX9g6VIYnBIlU=
+github.com/anyproto/any-sync v0.5.22-0.20241210162351-c6f5b3491c10/go.mod h1:K53/whh/9tmGbXrkPS59XyqWU3SaxhsX9g6VIYnBIlU=
 github.com/anyproto/go-slip10 v1.0.0 h1:uAEtSuudR3jJBOfkOXf3bErxVoxbuKwdoJN55M1i6IA=
 github.com/anyproto/go-slip10 v1.0.0/go.mod h1:BCmIlM1KB8wX6K4/8pOvxPl9oVKfEvZ5vsmO5rkK6vg=
 github.com/anyproto/go-slip21 v1.0.0 h1:CI7lUqTIwmPOEGVAj4jyNLoICvueh++0U2HoAi3m2ZY=

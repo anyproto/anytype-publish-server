@@ -4,7 +4,7 @@ go 1.23.2
 
 require (
 	github.com/ahmetb/govvv v0.3.0
-	github.com/anyproto/any-sync v0.5.21
+	github.com/anyproto/any-sync v0.5.22-0.20241210162351-c6f5b3491c10
 	github.com/anyproto/anytype-publish-server/publishclient v0.0.0-00010101000000-000000000000
 	github.com/google/uuid v1.6.0
 	github.com/stretchr/testify v1.9.0
