@@ -1,0 +1,17 @@
+on:
+  pull_request:
+    branches:
+      - main
+
+name: coverage
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-reusable:
+    uses: anyproto/any-sync-node/.github/workflows/coverage-reusable.yml@main
+    secrets: inherit # pass all secrets
+    with:
+      start_redis: true
