@@ -5,5 +5,6 @@ type configGetter interface {
 }
 
 type Config struct {
-	UploadUrlPrefix string `yml:"uploadUrlPrefix"`
+	UploadUrlPrefix string `yaml:"uploadUrlPrefix"`
+	HttpApiAddr     string `yaml:"httpApiAddr"`
 }

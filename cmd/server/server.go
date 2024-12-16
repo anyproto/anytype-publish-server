@@ -12,10 +12,23 @@ import (
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/coordinator/coordinatorclient"
+	"github.com/anyproto/any-sync/coordinator/nodeconfsource"
+	"github.com/anyproto/any-sync/net/peerservice"
+	"github.com/anyproto/any-sync/net/pool"
+	"github.com/anyproto/any-sync/net/rpc/server"
+	"github.com/anyproto/any-sync/net/secureservice"
+	"github.com/anyproto/any-sync/net/transport/quic"
+	"github.com/anyproto/any-sync/net/transport/yamux"
+	"github.com/anyproto/any-sync/nodeconf"
+	"github.com/anyproto/any-sync/nodeconf/nodeconfstore"
 
+	"github.com/anyproto/anytype-publish-server/account"
 	"github.com/anyproto/anytype-publish-server/config"
 	"github.com/anyproto/anytype-publish-server/db"
+	"github.com/anyproto/anytype-publish-server/publish"
 	"github.com/anyproto/anytype-publish-server/publish/publishrepo"
+	"github.com/anyproto/anytype-publish-server/store"
 
 	// import this to keep govvv in go.mod on mod tidy
 	_ "github.com/ahmetb/govvv/integration-test/app-different-package/mypkg"
@@ -89,5 +102,18 @@ func main() {
 
 func Bootstrap(a *app.App) {
 	a.Register(db.New()).
-		Register(publishrepo.New())
+		Register(server.New()).
+		Register(account.New()).
+		Register(pool.New()).
+		Register(peerservice.New()).
+		Register(coordinatorclient.New()).
+		Register(nodeconfsource.New()).
+		Register(nodeconfstore.New()).
+		Register(nodeconf.New()).
+		Register(secureservice.New()).
+		Register(store.New()).
+		Register(publishrepo.New()).
+		Register(publish.New()).
+		Register(quic.New()).
+		Register(yamux.New())
 }

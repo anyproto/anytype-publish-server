@@ -2,6 +2,9 @@ package publish
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"net/http"
 
 	"github.com/anyproto/anytype-publish-server/domain"
 	"github.com/anyproto/anytype-publish-server/publishclient/publishapi"
@@ -79,4 +82,44 @@ func toPublish(obj domain.ObjectWithPublish) *publishapi.Publish {
 		}
 	}
 	return publish
+}
+
+type httpHandler struct {
+	s *publishService
+}
+
+func (h httpHandler) init(m *http.ServeMux) {
+	m.HandleFunc("/api/upload/:publishId/:uploadKey", h.Upload)
+	m.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		writeErr(w, http.StatusNotFound, errors.New("not found"))
+	})
+}
+
+func (h httpHandler) Upload(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeErr(w, http.StatusMethodNotAllowed, errors.New("method not allowed"))
+		return
+	}
+
+	defer func() {
+		_ = r.Body.Close()
+	}()
+	if err := h.s.UploadTar(r.Context(), r.PathValue("publishId"), r.PathValue("uploadKey"), r.Body); err != nil {
+		writeErr(w, http.StatusInternalServerError, err)
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"ok": true}`))
+	}
+}
+
+func writeErr(w http.ResponseWriter, status int, err error) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	type errResp struct {
+		Error string `json:"error"`
+	}
+	errData := errResp{Error: err.Error()}
+	errDataBytes, _ := json.Marshal(errData)
+	_, _ = w.Write(errDataBytes)
 }
