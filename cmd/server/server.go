@@ -26,6 +26,7 @@ import (
 	"github.com/anyproto/anytype-publish-server/account"
 	"github.com/anyproto/anytype-publish-server/config"
 	"github.com/anyproto/anytype-publish-server/db"
+	"github.com/anyproto/anytype-publish-server/gateway"
 	"github.com/anyproto/anytype-publish-server/publish"
 	"github.com/anyproto/anytype-publish-server/publish/publishrepo"
 	"github.com/anyproto/anytype-publish-server/store"
@@ -114,6 +115,7 @@ func Bootstrap(a *app.App) {
 		Register(store.New()).
 		Register(publishrepo.New()).
 		Register(publish.New()).
+		Register(gateway.New()).
 		Register(quic.New()).
 		Register(yamux.New())
 }

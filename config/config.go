@@ -13,6 +13,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/anyproto/anytype-publish-server/db"
+	"github.com/anyproto/anytype-publish-server/gateway/gatewayconfig"
 	"github.com/anyproto/anytype-publish-server/publish"
 	"github.com/anyproto/anytype-publish-server/store"
 )
@@ -40,6 +41,7 @@ type Config struct {
 	Yamux                    yamux.Config           `yaml:"yamux"`
 	Quic                     quic.Config            `yaml:"quic"`
 	Network                  nodeconf.Configuration `yaml:"network"`
+	Gateway                  gatewayconfig.Config   `yaml:"gateway"`
 	NetworkStorePath         string                 `yaml:"networkStorePath"`
 	NetworkUpdateIntervalSec int                    `yaml:"networkUpdateIntervalSec"`
 }
@@ -94,4 +96,8 @@ func (c *Config) GetQuic() quic.Config {
 
 func (c *Config) GetSecureService() secureservice.Config {
 	return secureservice.Config{RequireClientAuth: true}
+}
+
+func (c *Config) GetGateway() gatewayconfig.Config {
+	return c.Gateway
 }

@@ -104,12 +104,18 @@ func (h httpHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		_ = r.Body.Close()
 	}()
-	if err := h.s.UploadTar(r.Context(), r.PathValue("publishId"), r.PathValue("uploadKey"), r.Body); err != nil {
+	if url, err := h.s.UploadTar(r.Context(), r.PathValue("publishId"), r.PathValue("uploadKey"), r.Body); err != nil {
 		writeErr(w, http.StatusInternalServerError, err)
 	} else {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"ok": true}`))
+		var resp = struct {
+			UploadUrl string `json:"uploadUrl"`
+		}{
+			UploadUrl: url,
+		}
+		data, _ := json.Marshal(resp)
+		_, _ = w.Write(data)
 	}
 }
 

@@ -19,6 +19,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/anyproto/anytype-publish-server/domain"
+	"github.com/anyproto/anytype-publish-server/gateway/gatewayconfig"
 	"github.com/anyproto/anytype-publish-server/publish/publishrepo"
 	"github.com/anyproto/anytype-publish-server/publishclient/publishapi"
 	"github.com/anyproto/anytype-publish-server/store"
@@ -35,20 +36,23 @@ func New() Service {
 }
 
 type Service interface {
+	ResolveUriWithName(ctx context.Context, name, uri string) (publish domain.ObjectWithPublish, err error)
 	app.ComponentRunnable
 }
 
 type publishService struct {
-	config Config
-	store  store.Store
-	repo   publishrepo.PublishRepo
-	ticker periodicsync.PeriodicSync
+	config        Config
+	gatewayConfig gatewayconfig.Config
+	store         store.Store
+	repo          publishrepo.PublishRepo
+	ticker        periodicsync.PeriodicSync
 }
 
 func (p *publishService) Init(a *app.App) (err error) {
 	p.repo = a.MustComponent(publishrepo.CName).(publishrepo.PublishRepo)
 	p.store = a.MustComponent(store.CName).(store.Store)
 	p.config = a.MustComponent("config").(configGetter).GetPublish()
+	p.gatewayConfig = a.MustComponent("config").(gatewayconfig.ConfigGetter).GetGateway()
 	p.ticker = periodicsync.NewPeriodicSync(60, 0, p.Cleanup, log)
 	return publishapi.DRPCRegisterWebPublisher(a.MustComponent(server.CName).(server.DRPCServer), &rpcHandler{s: p})
 }
@@ -80,6 +84,11 @@ func (p *publishService) ResolveUri(ctx context.Context, uri string) (publish do
 		return
 	}
 	return p.repo.ResolveUri(ctx, identity, uri)
+}
+
+func (p *publishService) ResolveUriWithName(ctx context.Context, name, uri string) (publish domain.ObjectWithPublish, err error) {
+	// TODO: do not request publish (only object)
+	return p.repo.ResolveUri(ctx, name, uri)
 }
 
 func (p *publishService) GetPublishStatus(ctx context.Context, spaceId string, objectId string) (publish domain.ObjectWithPublish, err error) {
@@ -117,7 +126,7 @@ func (p *publishService) ListPublishes(ctx context.Context) (list []domain.Objec
 	return p.repo.ListPublishes(ctx, identity)
 }
 
-func (p *publishService) UploadTar(ctx context.Context, publishId, uploadKey string, reader io.Reader) (err error) {
+func (p *publishService) UploadTar(ctx context.Context, publishId, uploadKey string, reader io.Reader) (resultUrl string, err error) {
 	id, err := primitive.ObjectIDFromHex(publishId)
 	if err != nil {
 		return
@@ -127,10 +136,10 @@ func (p *publishService) UploadTar(ctx context.Context, publishId, uploadKey str
 		return
 	}
 	if publish.UploadKey != uploadKey {
-		return errors.New("invalid upload key")
+		return "", errors.New("invalid upload key")
 	}
 	if publish.Status != domain.PublishStatusCreated {
-		return errors.New("publish is not in created state")
+		return "", errors.New("publish is not in created state")
 	}
 	defer func() {
 		if err != nil {
@@ -148,7 +157,7 @@ func (p *publishService) UploadTar(ctx context.Context, publishId, uploadKey str
 	if err = p.repo.FinalizePublish(ctx, publish); err != nil {
 		return
 	}
-	return
+	return url.JoinPath("https://", p.gatewayConfig.Domain, publish.ObjectId)
 }
 
 func (p *publishService) uploadTar(ctx context.Context, publishId string, reader io.Reader, limit int) (size int, err error) {
