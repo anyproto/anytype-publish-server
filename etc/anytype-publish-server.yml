@@ -1,6 +1,18 @@
+account:
+  peerId: 12D3KooWR8Ci1XidFCCXoZppGrUmiy4D1Mjoux9xK6QoZrpbQC3J
+  peerKey: tfs8m4DwNMyPS9UScqizzxQnJGiHn6GA/z80IKe5tUrjcQ+ZxBQnq+xfAjEgI3pCeQdvHs1iNIByWvbfiHGZaQ==
+  signingKey: tfs8m4DwNMyPS9UScqizzxQnJGiHn6GA/z80IKe5tUrjcQ+ZxBQnq+xfAjEgI3pCeQdvHs1iNIByWvbfiHGZaQ==
 drpc:
   stream:
     maxMsgSizeMb: 256
 mongo:
   connect: mongodb://localhost:27017
   database: publish_test
+s3Store:
+  region: "eu-central-1"
+  bucket: "anytype-gobackend-test"
+networkStorePath: .
+networkUpdateIntervalSec: 300
+publish:
+  uploadUrlPrefix: "http://127.0.0.1:8383/api/upload"
+  httpApiAddr: ":8383"

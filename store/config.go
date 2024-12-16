@@ -10,7 +10,6 @@ type Credentials struct {
 }
 
 type Config struct {
-	Profile     string      `yaml:"profile"`
 	Region      string      `yaml:"region"`
 	Bucket      string      `yaml:"bucket"`
 	Credentials Credentials `yaml:"credentials"`
