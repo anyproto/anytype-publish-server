@@ -89,7 +89,7 @@ type httpHandler struct {
 }
 
 func (h httpHandler) init(m *http.ServeMux) {
-	m.HandleFunc("/api/upload/:publishId/:uploadKey", h.Upload)
+	m.HandleFunc("/api/upload/{publishId}/{uploadKey}", h.Upload)
 	m.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusNotFound, errors.New("not found"))
 	})
