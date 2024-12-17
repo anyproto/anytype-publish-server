@@ -21,3 +21,8 @@ gateway:
   publishFilesUrl: "https://anytype-gobackend-test.s3.eu-central-1.amazonaws.com"
   staticFilesUrl: "http://127.0.0.1:8380/static"
   serveStatic: true
+yamux:
+  listenAddrs:
+    - 127.0.0.1:4940
+  writeTimeoutSec: 10
+  dialTimeoutSec: 10
