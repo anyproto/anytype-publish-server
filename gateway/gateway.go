@@ -94,7 +94,7 @@ func (g *gateway) renderPageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	config := renderer.RenderConfig{
-		StaticFilesPath:  "/static",
+		StaticFilesPath:  g.config.StaticFilesURL,
 		PublishFilesPath: publicFilesPath,
 		PrismJsCdnUrl:    "https://cdn.jsdelivr.net/npm/prismjs@1.29.0",
 		AnytypeCdnUrl:    "https://anytype-static.fra1.cdn.digitaloceanspaces.com",
