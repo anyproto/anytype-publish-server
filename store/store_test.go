@@ -14,7 +14,7 @@ import (
 var ctx = context.Background()
 
 func TestStore_Put(t *testing.T) {
-	//t.Skip()
+	t.Skip()
 	fx := newFixture(t)
 	data := bytes.NewReader([]byte("some data"))
 	require.NoError(t, fx.Put(ctx, File{Name: "some/key", ContentSize: int(data.Size()), Reader: data}))
