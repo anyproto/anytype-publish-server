@@ -2,6 +2,7 @@ package publish
 
 import (
 	"archive/tar"
+	"bufio"
 	"context"
 	"errors"
 	"io"
@@ -178,9 +179,9 @@ func (p *publishService) uploadTar(ctx context.Context, publishId string, reader
 			strings.TrimPrefix(header.Name, "/"),
 		}, "/")
 		file := store.File{
-			Name:        fileName,
-			ContentSize: int(header.Size),
-			Reader:      tarReader,
+			Name:   fileName,
+			Size:   int(header.Size),
+			Reader: bufio.NewReader(tarReader),
 		}
 		if err = p.store.Put(ctx, file); err != nil {
 			return

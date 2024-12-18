@@ -70,10 +70,11 @@ func (s *store) Name() string {
 func (s *store) Put(ctx context.Context, file File) error {
 	log.Info("put s3", zap.String("key", file.Name))
 	input := &s3.PutObjectInput{
-		Bucket:      s.bucket,
-		Key:         &file.Name,
-		Body:        file,
-		ContentType: aws.String(file.ContentType()),
+		Bucket:        s.bucket,
+		Key:           &file.Name,
+		Body:          file.Reader,
+		ContentType:   aws.String(file.ContentType()),
+		ContentLength: aws.Int64(int64(file.Size)),
 	}
 	_, err := s.client.PutObject(ctx, input)
 	if err != nil {

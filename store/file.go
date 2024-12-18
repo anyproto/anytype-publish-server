@@ -1,21 +1,29 @@
 package store
 
 import (
-	"io"
+	"bufio"
 	"mime"
+	"net/http"
 	"path/filepath"
 )
 
 type File struct {
-	Name        string
-	ContentSize int
-	io.Reader
+	Name   string
+	Size   int
+	Reader *bufio.Reader
 }
 
 func (f File) ContentType() string {
-	return mime.TypeByExtension(filepath.Ext(f.Name))
-}
+	ext := filepath.Ext(f.Name)
+	if ext != "" {
+		return mime.TypeByExtension(ext)
+	}
 
-func (f File) Len() int {
-	return f.ContentSize
+	// No extension, pick the first bytes for content type
+	buf, err := f.Reader.Peek(512)
+	if err != nil && err != bufio.ErrBufferFull {
+		return "application/octet-stream" // Default fallback
+	}
+
+	return http.DetectContentType(buf)
 }

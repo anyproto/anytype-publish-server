@@ -1,6 +1,7 @@
 package store
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"io"
@@ -14,10 +15,10 @@ import (
 var ctx = context.Background()
 
 func TestStore_Put(t *testing.T) {
-	t.Skip()
+	//t.Skip()
 	fx := newFixture(t)
 	data := bytes.NewReader([]byte("some data"))
-	require.NoError(t, fx.Put(ctx, File{Name: "some/key", ContentSize: int(data.Size()), Reader: data}))
+	require.NoError(t, fx.Put(ctx, File{Name: "some/key", Size: int(data.Size()), Reader: bufio.NewReader(data)}))
 	reader, err := fx.Get(ctx, "some/key")
 	require.NoError(t, err)
 	result, err := io.ReadAll(reader)
