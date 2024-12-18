@@ -27,6 +27,7 @@ type PublishRepo interface {
 	ObjectDelete(ctx context.Context, object domain.Object) (err error)
 	ObjectPublishStatus(ctx context.Context, object domain.Object) (publish domain.ObjectWithPublish, err error)
 	ResolveUri(ctx context.Context, identity, uri string) (publish domain.ObjectWithPublish, err error)
+	ResolvePublishUri(ctx context.Context, identity, uri string) (publish domain.Object, err error)
 	ListPublishes(ctx context.Context, identity string) ([]domain.ObjectWithPublish, error)
 	GetPublish(ctx context.Context, id primitive.ObjectID) (publish domain.Publish, err error)
 	FinalizePublish(ctx context.Context, publish domain.Publish) (err error)
@@ -172,14 +173,22 @@ func (p *publishRepo) ObjectPublishStatus(ctx context.Context, object domain.Obj
 		{"identity", object.Identity},
 		{"spaceId", object.SpaceId},
 		{"objectId", object.ObjectId},
-	})
+	}, true)
 }
 
 func (p *publishRepo) ResolveUri(ctx context.Context, identity, uri string) (publish domain.ObjectWithPublish, err error) {
-	return p.getPublishByQuery(ctx, bson.D{{"_id", identity + "/" + uri}})
+	return p.getPublishByQuery(ctx, bson.D{{"_id", identity + "/" + uri}}, true)
 }
 
-func (p *publishRepo) getPublishByQuery(ctx context.Context, query any) (publish domain.ObjectWithPublish, err error) {
+func (p *publishRepo) ResolvePublishUri(ctx context.Context, identity, uri string) (publish domain.Object, err error) {
+	objectWithPublish, err := p.getPublishByQuery(ctx, bson.D{{"_id", identity + "/" + uri}}, false)
+	if err != nil {
+		return
+	}
+	return objectWithPublish.Object, nil
+}
+
+func (p *publishRepo) getPublishByQuery(ctx context.Context, query any, withPublish bool) (publish domain.ObjectWithPublish, err error) {
 	if err = p.objectsColl.FindOne(ctx, query).Decode(&publish.Object); err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return domain.ObjectWithPublish{}, publishapi.ErrNotFound
@@ -187,7 +196,7 @@ func (p *publishRepo) getPublishByQuery(ctx context.Context, query any) (publish
 			return
 		}
 	}
-	if publish.ActivePublishId != nil {
+	if withPublish && publish.ActivePublishId != nil {
 		if err = p.publishColl.FindOne(ctx, bson.M{"_id": *publish.ActivePublishId}).Decode(&publish.Publish); err != nil {
 			if errors.Is(err, mongo.ErrNoDocuments) {
 				publish.ActivePublishId = nil

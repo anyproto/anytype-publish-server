@@ -37,7 +37,7 @@ func New() Service {
 }
 
 type Service interface {
-	ResolveUriWithName(ctx context.Context, name, uri string) (publish domain.ObjectWithPublish, err error)
+	ResolveUriWithName(ctx context.Context, name, uri string) (publish domain.Object, err error)
 	app.ComponentRunnable
 }
 
@@ -87,9 +87,8 @@ func (p *publishService) ResolveUri(ctx context.Context, uri string) (publish do
 	return p.repo.ResolveUri(ctx, identity, uri)
 }
 
-func (p *publishService) ResolveUriWithName(ctx context.Context, name, uri string) (publish domain.ObjectWithPublish, err error) {
-	// TODO: do not request publish (only object)
-	return p.repo.ResolveUri(ctx, name, uri)
+func (p *publishService) ResolveUriWithName(ctx context.Context, name, uri string) (publish domain.Object, err error) {
+	return p.repo.ResolvePublishUri(ctx, name, uri)
 }
 
 func (p *publishService) GetPublishStatus(ctx context.Context, spaceId string, objectId string) (publish domain.ObjectWithPublish, err error) {
