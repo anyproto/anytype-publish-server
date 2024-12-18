@@ -423,6 +423,24 @@ main {
 
 .blocks .block.align1 > .wrapContent {
     text-align: center;
+
+}
+.wrapContent {
+    width: 100%;
+}
+
+.blockEmbed.isGraphviz svg {
+    height: auto;
+}
+
+.blockEmbed.isGraphviz {
+    height: auto;
+    width: 100%;
+}
+
+.blockEmbed:not(.isLatex) svg {
+    max-width: 100% !important;
+    background: #fff;
 }
 .blocks .block.blockIconPage {
     padding: 0px 0px 16px 0px;
@@ -802,8 +820,19 @@ main {
   background: var(--color-control-accent) !important;
 }
 
+@media (orientation: portrait) {
+    .blocks {
+        width: 100%;
+    }
+}
+
+@media (orientation: landscape) {
+    .blocks {
+        width: 704px;
+    }
+}
+
 .blocks {
-  width: 704px;
   margin: 0px auto;
   padding: 0px 0px 80px 0px;
 }
@@ -1035,7 +1064,7 @@ markuplatex {
   width: 100%;
   border-radius: 4px;
   overflow: hidden;
-  margin: 0px auto;
+  margin: 15px auto;
 }
 
 .block.blockCover > .content {
@@ -1184,6 +1213,16 @@ markuplatex {
 .block.blockText > .content > .flex .markers .marker .icon {
   display: inline-block;
 }
+
+.block.blockText > .content > .flex .markers .marker.toggle {
+  display: flex;
+  align-items: center;
+}
+
+.block.blockText.textToggle.isToggled > .content > .flex .markers .marker.toggle {
+  transform: rotateZ(90deg);
+}
+
 .block.blockText > .content > .flex .markers .marker.bullet {
   display: flex;
   align-items: center;
@@ -1376,9 +1415,15 @@ markuplatex {
 }
 
 /* Toggle */
+.block.blockText.textToggle.isToggled > .children {
+  display: block;
+}
+
+
 .block.blockText.textToggle > .children {
   display: none;
 }
+
 
 .block.blockDiv {
   padding: 0px;
@@ -1477,4 +1522,125 @@ markuplatex {
   width: 100%;
   display: block;
   cursor: zoom-in;
+}
+
+.blocks .block.blockTable {
+    padding: 6px 0px;
+}
+
+
+.cell .block.bgColor {
+    border-radius: 0px;
+}
+
+.blocks .block.blockTable .row {
+    display: grid;
+    position: relative;
+    border-right: 1px solid var(--color-shape-primary);
+}
+
+.blocks .block.blockTable .row:nth-child(2) {
+    border-radius: 4px 4px 0px 0px;
+}
+.blocks .block.blockTable .row:nth-child(2) .cell:first-child {
+    border-radius: 4px 0px 0px 0px;
+}
+
+.blocks .block.blockTable .row:nth-child(2) .cell:last-child {
+    border-radius: 0px 4px 0px 0px;
+}
+
+.blocks .block.blockTable .row:last-child {
+    border-bottom: 1px solid var(--color-shape-primary);
+    border-radius: 0px 0px 4px 4px;
+}
+.blocks .block.blockTable .row:last-child .cell:first-child {
+    border-radius: 0px 0px 0px 4px;
+}
+
+.blocks .block.blockTable .row:last-child .cell:last-child {
+    border-radius: 0px 0px 4px 0px;
+}
+
+.blocks .block.blockTable .cell {
+    font-size: var(--font-size-common);
+    line-height: var(--line-height-common);
+    letter-spacing: var(--letter-spacing-common);
+    vertical-align: top;
+    position: relative;
+    cursor: text;
+    flex-shrink: 0;
+    background: var(--color-bg-primary);
+    color: var(--color-shape-primary);
+    border-left: 1px solid var(--color-shape-primary);
+    border-top: 1px solid var(--color-shape-primary);
+}
+
+.blocks .block.blockTable .cell .block  {
+    padding: 9px 9px 9px 9px;
+    margin: 0px;
+}
+
+.blocks .block.blockTable .cell .block {
+    height: 100%;
+    border: 0px !important;
+    color: var(--color-text-primary);
+}
+
+a {
+    color: var(--color-text-primary);
+}
+
+.blocks .block.blockTable .row.isHeader .cell {
+    background-color: var(--color-shape-tertiary);
+}
+
+.blocks .block.blockTable .wrapContent {
+    padding: 5px;
+}
+
+.blocks .block.blockTable .wrapContent > .inner {
+    display: inline-block;
+    position: relative;
+}
+
+.madeInAnytype {
+    height: 36px;
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    padding: 12px;
+    border-radius: 8px;
+    background: var(--color-shape-tertiary);
+}
+
+.madeInAnytype .container .madeInText {
+    color: var(--color-text-primary);
+    font-size: var(--font-size-small);
+    font-weight: 500;
+    margin-top: -4px;
+    padding-left: 7px;
+}
+
+.madeInAnytype .container {
+    display: flex;
+    flex-flow: row;
+    margin-top: -1px;
+}
+
+.madeInAnytype .container .anyIcon {
+
+}
+
+.joinSpace {
+    width: 100%;
+    text-align: right;
+}
+.joinSpace a {
+    color: var(--color-text-primary);
+    font-size: var(--font-size-common);
+    font-weight: 500;
+    padding: 15px 15px;
+    margin: 10px 0px;
+    text-decoration: none;
 }
