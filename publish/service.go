@@ -170,11 +170,19 @@ func (p *publishService) uploadTar(ctx context.Context, publishId string, reader
 		if err != nil {
 			return
 		}
+		if header.FileInfo().IsDir() {
+			continue
+		}
 		fileName := strings.Join([]string{
 			publishId,
 			strings.TrimPrefix(header.Name, "/"),
 		}, "/")
-		if err = p.store.Put(ctx, fileName, tarReader); err != nil {
+		file := store.File{
+			Name:        fileName,
+			ContentSize: int(header.Size),
+			Reader:      tarReader,
+		}
+		if err = p.store.Put(ctx, file); err != nil {
 			return
 		}
 		size += int(header.Size)

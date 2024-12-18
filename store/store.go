@@ -7,11 +7,13 @@ import (
 	"io"
 
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/logger"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"go.uber.org/zap"
 )
 
 var (
@@ -22,12 +24,14 @@ func New() Store {
 	return &store{}
 }
 
-const CName = "store"
+const CName = "publish.store"
+
+var log = logger.NewNamed(CName)
 
 type Store interface {
 	app.Component
 
-	Put(ctx context.Context, key string, reader io.Reader) error
+	Put(ctx context.Context, file File) error
 	Get(ctx context.Context, key string) (io.ReadCloser, error)
 	DeletePath(ctx context.Context, path string) error
 }
@@ -55,6 +59,7 @@ func (s *store) Init(a *app.App) (err error) {
 	awsConf.Region = conf.Region
 	s.bucket = aws.String(conf.Bucket)
 	s.client = s3.NewFromConfig(awsConf)
+	log.Info("s3 started", zap.String("region", conf.Region), zap.String("bucket", *s.bucket))
 	return nil
 }
 
@@ -62,14 +67,17 @@ func (s *store) Name() string {
 	return CName
 }
 
-func (s *store) Put(ctx context.Context, key string, reader io.Reader) error {
+func (s *store) Put(ctx context.Context, file File) error {
+	log.Info("put s3", zap.String("key", file.Name))
 	input := &s3.PutObjectInput{
-		Bucket: s.bucket,
-		Key:    &key,
-		Body:   reader,
+		Bucket:      s.bucket,
+		Key:         &file.Name,
+		Body:        file,
+		ContentType: aws.String(file.ContentType()),
 	}
 	_, err := s.client.PutObject(ctx, input)
 	if err != nil {
+		log.Warn("put s3", zap.String("key", file.Name), zap.Error(err))
 		return err
 	}
 	return nil

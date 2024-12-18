@@ -2,13 +2,15 @@ package gateway
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/anytype-publish-renderer/renderer"
 	"go.uber.org/zap"
 
 	"github.com/anyproto/anytype-publish-server/gateway/gatewayconfig"
@@ -85,17 +87,29 @@ func (g *gateway) renderPageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: render here
-
-	var resp = map[string]any{
-		"publish":    pub,
-		"staticUri":  g.config.StaticFilesURL,
-		"publishUrl": g.config.PublishFilesURL + "/" + pub.ActivePublishId.String(),
+	publicFilesPath, err := url.JoinPath(g.config.PublishFilesURL, pub.ActivePublishId.Hex())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	data, _ := json.Marshal(resp)
-	_, _ = w.Write(data)
+
+	config := renderer.RenderConfig{
+		StaticFilesPath:  "/static",
+		PublishFilesPath: publicFilesPath,
+		PrismJsCdnUrl:    "https://cdn.jsdelivr.net/npm/prismjs@1.29.0",
+		AnytypeCdnUrl:    "https://anytype-static.fra1.cdn.digitaloceanspaces.com",
+		AnalyticsCode:    `<script>console.log("sending dummy analytics...")</script>`,
+	}
+
+	rend, err := renderer.NewRenderer(config)
+	if err != nil {
+		fmt.Printf("Error creating renderer: %v\n", err)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html")
+	if err = rend.Render(w); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func (g *gateway) Close(ctx context.Context) (err error) {

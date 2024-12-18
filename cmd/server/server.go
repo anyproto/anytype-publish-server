@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
@@ -58,11 +59,11 @@ func main() {
 		return
 	}
 
-	// if debug, ok := os.LookupEnv("ANYPROF"); ok && debug != "" {
-	// 	go func() {
-	// 		http.ListenAndServe(debug, nil)
-	// 	}()
-	// }
+	if debug, ok := os.LookupEnv("ANYPROF"); ok && debug != "" {
+		go func() {
+			http.ListenAndServe(debug, nil)
+		}()
+	}
 
 	// create app
 	ctx := context.Background()
