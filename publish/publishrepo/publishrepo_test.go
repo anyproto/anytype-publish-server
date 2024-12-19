@@ -7,6 +7,7 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/anyproto/anytype-publish-server/db"
 	"github.com/anyproto/anytype-publish-server/domain"
@@ -99,6 +100,26 @@ func TestPublishRepo_ObjectPublishStatus(t *testing.T) {
 		assert.Equal(t, domain.PublishStatusPublished, publishObj.Publish.Status)
 		assert.Equal(t, int64(123), publishObj.Publish.Size)
 	})
+}
+
+func TestPublishRepo_IterateReadyToDeleteIds(t *testing.T) {
+	fx := newFixture(t)
+	docs := []any{
+		domain.Publish{Id: primitive.NewObjectID(), Status: domain.PublishStatusReadyToDelete},
+		domain.Publish{Id: primitive.NewObjectID(), Status: domain.PublishStatusReadyToDelete},
+	}
+	_, _ = fx.PublishRepo.(*publishRepo).publishColl.InsertMany(ctx, docs)
+	var res []string
+	err := fx.IterateReadyToDeleteIds(ctx, func(id primitive.ObjectID) error {
+		res = append(res, id.Hex())
+		return nil
+	})
+	require.NoError(t, err)
+	var exp []string
+	for _, d := range docs {
+		exp = append(exp, d.(domain.Publish).Id.Hex())
+	}
+	assert.Equal(t, exp, res)
 }
 
 func assertObject(t *testing.T, expected domain.Object, got domain.Object) {

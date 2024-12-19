@@ -16,6 +16,7 @@ networkUpdateIntervalSec: 300
 publish:
   uploadUrlPrefix: "http://127.0.0.1:8383/api/upload"
   httpApiAddr: ":8383"
+  cleanupOn: true
 gateway:
   addr: ":8380"
   publishFilesUrl: "https://anytype-gobackend-test.s3.eu-central-1.amazonaws.com"
