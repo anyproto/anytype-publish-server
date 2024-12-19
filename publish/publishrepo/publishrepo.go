@@ -143,7 +143,7 @@ func (p *publishRepo) changeObjectUri(ctx context.Context, object *domain.Object
 	if _, err = p.objectsColl.DeleteOne(ctx, bson.D{{"_id", object.Id}}); err != nil {
 		return
 	}
-	object.Id = object.Identity + "/" + object.Uri
+	object.Id = object.Identity + "/" + uri
 	object.Uri = uri
 	if _, err = p.objectsColl.InsertOne(ctx, object); err != nil {
 		if mongo.IsDuplicateKeyError(err) {
