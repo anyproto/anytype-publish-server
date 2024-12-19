@@ -14,7 +14,7 @@ s3Store:
 networkStorePath: .
 networkUpdateIntervalSec: 300
 publish:
-  uploadUrlPrefix: "http://192.168.103.201:8383/api/upload"
+  uploadUrlPrefix: "http://127.0.0.1:8383/api/upload"
   httpApiAddr: ":8383"
 gateway:
   addr: ":8380"
