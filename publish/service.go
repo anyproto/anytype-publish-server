@@ -54,11 +54,14 @@ func (p *publishService) Init(a *app.App) (err error) {
 	p.store = a.MustComponent(store.CName).(store.Store)
 	p.config = a.MustComponent("config").(configGetter).GetPublish()
 	p.gatewayConfig = a.MustComponent("config").(gatewayconfig.ConfigGetter).GetGateway()
-	p.ticker = periodicsync.NewPeriodicSync(60, 0, p.Cleanup, log)
 	return publishapi.DRPCRegisterWebPublisher(a.MustComponent(server.CName).(server.DRPCServer), &rpcHandler{s: p})
 }
 
 func (p *publishService) Run(ctx context.Context) (err error) {
+	if p.config.CleanupOn {
+		p.ticker = periodicsync.NewPeriodicSync(300, 0, p.Cleanup, log)
+		p.ticker.Run()
+	}
 	mux := http.NewServeMux()
 	handler := httpHandler{s: p}
 	handler.init(mux)
@@ -194,6 +197,42 @@ func (p *publishService) uploadTar(ctx context.Context, publishId string, reader
 }
 
 func (p *publishService) Cleanup(ctx context.Context) error {
+	before := time.Now().Add(-time.Hour)
+	st := time.Now()
+	deletedCount, err := p.repo.DeleteOutdatedPublishes(ctx, before)
+	if err != nil {
+		log.Warn("delete outdated publishes", zap.Error(err))
+	} else {
+		log.Info("deleted outdated publishes", zap.Int("count", deletedCount), zap.Duration("dur", time.Since(st)))
+	}
+
+	st = time.Now()
+	deletedCount, err = p.repo.DeleteOutdatedObjects(ctx, before)
+	if err != nil {
+		log.Warn("delete outdated objects", zap.Error(err))
+	} else {
+		log.Info("deleted outdated objects", zap.Int("count", deletedCount), zap.Duration("dur", time.Since(st)))
+	}
+
+	st = time.Now()
+	var deletedPublishes int
+	err = p.repo.IterateReadyToDeleteIds(ctx, func(id primitive.ObjectID) error {
+		if delErr := p.store.DeletePath(ctx, id.Hex()); delErr != nil {
+			log.Warn("can't delete s3 path", zap.Error(err), zap.String("path", id.Hex()))
+		} else {
+			if delErr = p.repo.DeletePublish(ctx, id); delErr != nil {
+				log.Warn("can't delete publish by id", zap.Error(err), zap.String("id", id.Hex()))
+			} else {
+				deletedPublishes++
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		log.Warn("iterate unpublished publishes", zap.Error(err))
+	} else {
+		log.Info("deleted unpublished publishes", zap.Int("count", deletedPublishes), zap.Duration("dur", time.Since(st)))
+	}
 	return nil
 }
 
@@ -206,6 +245,8 @@ func (p *publishService) checkIdentity(ctx context.Context) (identity string, er
 }
 
 func (p *publishService) Close(ctx context.Context) (err error) {
-	p.ticker.Close()
+	if p.ticker != nil {
+		p.ticker.Close()
+	}
 	return
 }

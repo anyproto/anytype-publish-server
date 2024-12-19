@@ -10,6 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/anyproto/anytype-publish-server/db"
 	"github.com/anyproto/anytype-publish-server/domain"
@@ -31,6 +32,10 @@ type PublishRepo interface {
 	ListPublishes(ctx context.Context, identity string) ([]domain.ObjectWithPublish, error)
 	GetPublish(ctx context.Context, id primitive.ObjectID) (publish domain.Publish, err error)
 	FinalizePublish(ctx context.Context, publish domain.Publish) (err error)
+	IterateReadyToDeleteIds(ctx context.Context, do func(id primitive.ObjectID) error) error
+	DeletePublish(ctx context.Context, id primitive.ObjectID) (err error)
+	DeleteOutdatedPublishes(ctx context.Context, before time.Time) (deletedCount int, err error)
+	DeleteOutdatedObjects(ctx context.Context, before time.Time) (deletedCount int, err error)
 	app.ComponentRunnable
 }
 
@@ -38,7 +43,6 @@ var (
 	publishIndexes = []mongo.IndexModel{
 		{
 			Keys: bson.D{
-				{"objectId", 1},
 				{"status", 1},
 			},
 		},
@@ -241,16 +245,21 @@ func (p *publishRepo) ObjectDelete(ctx context.Context, object domain.Object) (e
 			return
 		}
 		if existingObject.ActivePublishId != nil {
-			if _, err = p.publishColl.UpdateOne(
-				ctx,
-				bson.D{{"_id", *existingObject.ActivePublishId}},
-				bson.D{{"$set", bson.D{{"status", domain.PublishStatusReadyToDelete}}}},
-			); err != nil {
-				return
-			}
+			return p.markPublishToDelete(ctx, *existingObject.ActivePublishId)
 		}
 		return
 	})
+}
+
+func (p *publishRepo) markPublishToDelete(ctx context.Context, id primitive.ObjectID) (err error) {
+	if _, err = p.publishColl.UpdateOne(
+		ctx,
+		bson.D{{"_id", id}},
+		bson.D{{"$set", bson.D{{"status", domain.PublishStatusReadyToDelete}}}},
+	); err != nil {
+		return
+	}
+	return
 }
 
 func (p *publishRepo) GetPublish(ctx context.Context, id primitive.ObjectID) (publish domain.Publish, err error) {
@@ -262,6 +271,17 @@ func (p *publishRepo) GetPublish(ctx context.Context, id primitive.ObjectID) (pu
 
 func (p *publishRepo) FinalizePublish(ctx context.Context, publish domain.Publish) (err error) {
 	return p.db.Tx(ctx, func(ctx mongo.SessionContext) (err error) {
+		var obj domain.Object
+		if err = p.objectsColl.FindOne(ctx, bson.D{{"_id", publish.ObjectId}}).Decode(&obj); err != nil {
+			return
+		}
+		// mark previous publish to delete
+		if obj.ActivePublishId != nil {
+			if err = p.markPublishToDelete(ctx, *obj.ActivePublishId); err != nil {
+				return err
+			}
+		}
+		// update publish
 		if _, err = p.publishColl.UpdateOne(
 			ctx,
 			bson.D{{"_id", publish.Id}},
@@ -272,17 +292,77 @@ func (p *publishRepo) FinalizePublish(ctx context.Context, publish domain.Publis
 		); err != nil {
 			return
 		}
+		// update object
 		if _, err = p.objectsColl.UpdateOne(
 			ctx,
 			bson.D{{"_id", publish.ObjectId}},
 			bson.D{{"$set", bson.D{
 				{"activePublishId", publish.Id},
+				{"updatedTimestamp", time.Now().Unix()},
 			}}},
 		); err != nil {
 			return
 		}
 		return
 	})
+}
+
+func (p *publishRepo) IterateReadyToDeleteIds(ctx context.Context, do func(id primitive.ObjectID) error) error {
+	opts := options.Find().SetProjection(bson.D{{"_id", 1}})
+	cur, err := p.publishColl.Find(ctx, bson.D{{"status", domain.PublishStatusReadyToDelete}}, opts)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = cur.Close(context.Background())
+	}()
+	var doc = struct {
+		Id primitive.ObjectID `bson:"_id"`
+	}{}
+	for cur.Next(ctx) {
+		if err = cur.Decode(&doc); err != nil {
+			return err
+		}
+		if err = do(doc.Id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (p *publishRepo) DeletePublish(ctx context.Context, id primitive.ObjectID) (err error) {
+	_, err = p.publishColl.DeleteOne(ctx, bson.D{{"_id", id}})
+	return
+}
+
+func (p *publishRepo) DeleteOutdatedPublishes(ctx context.Context, before time.Time) (deleted int, err error) {
+	query := bson.D{
+		{"status", domain.PublishStatusCreated},
+		{"_id", bson.D{
+			{"$lt", primitive.NewObjectIDFromTimestamp(before)},
+		}},
+	}
+	res, err := p.publishColl.DeleteMany(ctx, query)
+	if err != nil {
+		return
+	}
+	return int(res.DeletedCount), nil
+}
+
+func (p *publishRepo) DeleteOutdatedObjects(ctx context.Context, before time.Time) (deleted int, err error) {
+	query := bson.D{
+		{"activePublishId", bson.D{
+			{"$exists", false},
+		}},
+		{"timestamp", bson.D{
+			{"$lt", before.Unix()},
+		}},
+	}
+	res, err := p.publishColl.DeleteMany(ctx, query)
+	if err != nil {
+		return
+	}
+	return int(res.DeletedCount), nil
 }
 
 func (p *publishRepo) Close(ctx context.Context) (err error) {
