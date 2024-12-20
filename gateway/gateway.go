@@ -10,6 +10,9 @@ import (
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/app/ocache"
+	"github.com/anyproto/any-sync/nameservice/nameserviceclient"
+	"github.com/anyproto/any-sync/nameservice/nameserviceproto"
 	"github.com/anyproto/anytype-publish-renderer/renderer"
 	"go.uber.org/zap"
 
@@ -31,10 +34,12 @@ type Gateway interface {
 }
 
 type gateway struct {
-	mux     *http.ServeMux
-	server  *http.Server
-	publish publish.Service
-	config  gatewayconfig.Config
+	mux       *http.ServeMux
+	server    *http.Server
+	publish   publish.Service
+	config    gatewayconfig.Config
+	nnClient  nameserviceclient.AnyNsClientServiceBase
+	nameCache ocache.OCache
 }
 
 func (g *gateway) Name() (name string) {
@@ -49,8 +54,11 @@ func (g *gateway) Init(a *app.App) (err error) {
 	if g.config.ServeStatic {
 		g.mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 	}
+	g.mux.HandleFunc(`/name/{name}/{uri...}`, g.renderPageWithNameHandler)
 	g.mux.HandleFunc("/{name}/{uri...}", g.renderPageHandler)
 	g.server = &http.Server{Addr: g.config.Addr, Handler: g.mux}
+	g.nnClient = a.MustComponent(nameserviceclient.CName).(nameserviceclient.AnyNsClientServiceBase)
+	g.nameCache = ocache.New(g.resolveName, ocache.WithLogger(log.Sugar()), ocache.WithGCPeriod(time.Hour), ocache.WithTTL(time.Hour))
 	return
 }
 
@@ -66,6 +74,17 @@ func (g *gateway) Run(ctx context.Context) (err error) {
 		log.Info("gateway server started", zap.String("addr", g.config.Addr))
 		return
 	}
+}
+
+func (g *gateway) renderPageWithNameHandler(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	identity, err := g.getIdentity(r.Context(), name)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	r.SetPathValue("name", identity)
+	g.renderPageHandler(w, r)
 }
 
 func (g *gateway) renderPageHandler(w http.ResponseWriter, r *http.Request) {
@@ -110,6 +129,40 @@ func (g *gateway) renderPageHandler(w http.ResponseWriter, r *http.Request) {
 	if err = rend.Render(w); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func (g *gateway) getIdentity(ctx context.Context, name string) (identity string, err error) {
+	obj, err := g.nameCache.Get(ctx, name)
+	if err != nil {
+		return "", err
+	}
+	return obj.(*nameObject).nsResp.OwnerAnyAddress, nil
+}
+
+type nameObject struct {
+	nsResp *nameserviceproto.NameAvailableResponse
+}
+
+func (n *nameObject) Close() (err error) {
+	return nil
+}
+
+func (n *nameObject) TryClose(objectTTL time.Duration) (res bool, err error) {
+	if objectTTL > time.Hour {
+		return true, nil
+	} else {
+		return false, nil
+	}
+}
+
+func (g *gateway) resolveName(ctx context.Context, name string) (object ocache.Object, err error) {
+	resp, err := g.nnClient.IsNameAvailable(ctx, &nameserviceproto.NameAvailableRequest{
+		FullName: name + ".any",
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &nameObject{nsResp: resp}, nil
 }
 
 func (g *gateway) Close(ctx context.Context) (err error) {
