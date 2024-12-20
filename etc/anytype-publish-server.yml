@@ -27,3 +27,53 @@ yamux:
     - 0.0.0.0:4940
   writeTimeoutSec: 10
   dialTimeoutSec: 10
+network:
+  networkId: N83gJpVd9MuNRZAuJLZ7LiMntTThhPc6DtzWWVjb1M3PouVU
+  nodes:
+    - peerId: 12D3KooWKStBu7tNGumsNp2AnRWsm1XmcnWjZpcc6pKVrhG17sGc
+      addresses:
+        - prod-any-sync-coordinator1.anyclub.org:443
+        - prod-any-sync-coordinator1.anyclub.org:1443
+        - quic://prod-any-sync-coordinator1.anyclub.org:5430
+        - prod-any-sync-coordinator1.toolpad.org:443
+        - prod-any-sync-coordinator1.toolpad.org:1443
+        - prod-any-sync-coordinator1.anytype.io:443
+        - prod-any-sync-coordinator1.anytype.io:1443
+      types:
+        - coordinator
+    - peerId: 12D3KooWDWktnygiEzZHqWhjQXoaKqR2KVqJJwrn6AfXHy2BHJqd
+      addresses:
+        - prod-any-sync-coordinator2.anyclub.org:443
+        - prod-any-sync-coordinator2.anyclub.org:1443
+        - quic://prod-any-sync-coordinator2.anyclub.org:5430
+        - prod-any-sync-coordinator2.toolpad.org:443
+        - prod-any-sync-coordinator2.toolpad.org:1443
+        - prod-any-sync-coordinator2.anytype.io:443
+        - prod-any-sync-coordinator2.anytype.io:1443
+      types:
+        - coordinator
+    - peerId: 12D3KooWK6YnMBfMCQ442pTsW5WvFJDaEv4AzF2UTFWWUNEbENfL
+      addresses:
+        - prod-any-sync-coordinator3.anyclub.org:443
+        - prod-any-sync-coordinator3.anyclub.org:1443
+        - quic://prod-any-sync-coordinator3.anyclub.org:5430
+        - prod-any-sync-coordinator3.toolpad.org:443
+        - prod-any-sync-coordinator3.toolpad.org:1443
+        - prod-any-sync-coordinator3.anytype.io:443
+        - prod-any-sync-coordinator3.anytype.io:1443
+      types:
+        - coordinator
+    - peerId: 12D3KooWCy5Ng34BB1psTVd6p86aXhgpxivDSc4jy14NKqax681X
+      addresses:
+        - prod-any-sync-nsnode1.anyclub.org:443
+        - prod-any-sync-nsnode1.anyclub.org:1443
+        - quic://prod-any-sync-nsnode1.anyclub.org:5430
+      types:
+        - namingNode
+    - peerId: 12D3KooWAZSPR6AbBzNiCdgxUyfdpWR2ET25SKAVTWhujyTSjuDe
+      addresses:
+        - prod-any-sync-nsnode2.anyclub.org:443
+        - prod-any-sync-nsnode2.anyclub.org:1443
+        - quic://prod-any-sync-nsnode2.anyclub.org:5430
+      types:
+        - namingNode
