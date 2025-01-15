@@ -113,7 +113,7 @@ func (g *gateway) renderPageHandler(w http.ResponseWriter, r *http.Request) {
 		PublishFilesPath: publicFilesPath,
 		PrismJsCdnUrl:    "https://cdn.jsdelivr.net/npm/prismjs@1.29.0",
 		AnytypeCdnUrl:    "https://anytype-static.fra1.cdn.digitaloceanspaces.com",
-		AnalyticsCode:    `<script>console.log("sending dummy analytics...")</script>`,
+		AnalyticsCode:    g.config.AnalyticsCode,
 	}
 
 	rend, err := renderer.NewRenderer(config)

@@ -11,4 +11,5 @@ type Config struct {
 	PublishFilesURL string `yaml:"publishFilesUrl"`
 	ServeStatic     bool   `yaml:"serveStatic"`
 	ServePublish    bool   `yaml:"servePublish"`
+	AnalyticsCode   string `yaml:"analyticsCode"`
 }

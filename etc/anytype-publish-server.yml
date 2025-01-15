@@ -22,6 +22,9 @@ gateway:
   publishFilesUrl: "https://anytype-gobackend-test.s3.eu-central-1.amazonaws.com"
   staticFilesUrl: "http://127.0.0.1:8380/static"
   serveStatic: true
+  analyticsCode: >
+    <script>console.log("sending dummy analytics from config...")</script>
+
 yamux:
   listenAddrs:
     - 0.0.0.0:4940
