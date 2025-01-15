@@ -15,6 +15,7 @@ import (
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/coordinator/coordinatorclient"
 	"github.com/anyproto/any-sync/coordinator/nodeconfsource"
+	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/nameservice/nameserviceclient"
 	"github.com/anyproto/any-sync/net/peerservice"
 	"github.com/anyproto/any-sync/net/pool"
@@ -106,6 +107,7 @@ func main() {
 
 func Bootstrap(a *app.App) {
 	a.Register(db.New()).
+		Register(metric.New()).
 		Register(server.New()).
 		Register(account.New()).
 		Register(pool.New()).

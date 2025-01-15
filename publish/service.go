@@ -14,6 +14,7 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/app/ocache"
+	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/rpc/server"
 	"github.com/anyproto/any-sync/util/periodicsync"
@@ -53,6 +54,7 @@ type publishService struct {
 	repo          publishrepo.PublishRepo
 	ticker        periodicsync.PeriodicSync
 	nameService   nameservice.NameService
+	metric        metric.Metric
 }
 
 func (p *publishService) Init(a *app.App) (err error) {
@@ -61,6 +63,7 @@ func (p *publishService) Init(a *app.App) (err error) {
 	p.config = a.MustComponent("config").(configGetter).GetPublish()
 	p.gatewayConfig = a.MustComponent("config").(gatewayconfig.ConfigGetter).GetGateway()
 	p.nameService = a.MustComponent(nameservice.CName).(nameservice.NameService)
+	p.metric = a.MustComponent(metric.CName).(metric.Metric)
 	return publishapi.DRPCRegisterWebPublisher(a.MustComponent(server.CName).(server.DRPCServer), &rpcHandler{s: p})
 }
 
