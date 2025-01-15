@@ -13,6 +13,7 @@ import (
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/rpc/server"
 	"github.com/anyproto/any-sync/util/periodicsync"
@@ -21,6 +22,7 @@ import (
 
 	"github.com/anyproto/anytype-publish-server/domain"
 	"github.com/anyproto/anytype-publish-server/gateway/gatewayconfig"
+	"github.com/anyproto/anytype-publish-server/nameservice"
 	"github.com/anyproto/anytype-publish-server/publish/publishrepo"
 	"github.com/anyproto/anytype-publish-server/publishclient/publishapi"
 	"github.com/anyproto/anytype-publish-server/store"
@@ -30,7 +32,10 @@ const CName = "publish.service"
 
 var log = logger.NewNamed(CName)
 
-var defaultLimit = 10 << 20 // 10 Mb
+const (
+	defaultLimit   = 10 << 20 // 10 Mb
+	increasedLimit = 100 << 20
+)
 
 func New() Service {
 	return new(publishService)
@@ -47,6 +52,7 @@ type publishService struct {
 	store         store.Store
 	repo          publishrepo.PublishRepo
 	ticker        periodicsync.PeriodicSync
+	nameService   nameservice.NameService
 }
 
 func (p *publishService) Init(a *app.App) (err error) {
@@ -54,6 +60,7 @@ func (p *publishService) Init(a *app.App) (err error) {
 	p.store = a.MustComponent(store.CName).(store.Store)
 	p.config = a.MustComponent("config").(configGetter).GetPublish()
 	p.gatewayConfig = a.MustComponent("config").(gatewayconfig.ConfigGetter).GetGateway()
+	p.nameService = a.MustComponent(nameservice.CName).(nameservice.NameService)
 	return publishapi.DRPCRegisterWebPublisher(a.MustComponent(server.CName).(server.DRPCServer), &rpcHandler{s: p})
 }
 
@@ -134,10 +141,11 @@ func (p *publishService) UploadTar(ctx context.Context, publishId, uploadKey str
 	if err != nil {
 		return
 	}
-	publish, err := p.repo.GetPublish(ctx, id)
+	objWithPub, err := p.repo.GetPublish(ctx, id)
 	if err != nil {
 		return
 	}
+	publish := objWithPub.Publish
 	if publish.UploadKey != uploadKey {
 		return "", errors.New("invalid upload key")
 	}
@@ -150,14 +158,19 @@ func (p *publishService) UploadTar(ctx context.Context, publishId, uploadKey str
 		}
 	}()
 	var size int
-	if size, err = p.uploadTar(ctx, publishId, reader, defaultLimit); err != nil {
+
+	limit, err := p.getLimitByIdentity(ctx, objWithPub.Identity)
+	if err != nil {
+		return
+	}
+	if size, err = p.uploadTar(ctx, publishId, reader, limit); err != nil {
 		return
 	}
 	// TODO: validate here
 	publish.Size = int64(size)
 	publish.Status = domain.PublishStatusPublished
 	publish.UploadKey = ""
-	if err = p.repo.FinalizePublish(ctx, publish); err != nil {
+	if err = p.repo.FinalizePublish(ctx, objWithPub); err != nil {
 		return
 	}
 	return url.JoinPath("https://", p.gatewayConfig.Domain, publish.ObjectId)
@@ -194,6 +207,18 @@ func (p *publishService) uploadTar(ctx context.Context, publishId string, reader
 		}
 	}
 	return size, nil
+}
+
+func (p *publishService) getLimitByIdentity(ctx context.Context, identity string) (limit int, err error) {
+	_, err = p.nameService.ResolveIdentity(ctx, identity)
+	if errors.Is(err, ocache.ErrNotExists) {
+		return defaultLimit, nil
+	} else if err != nil {
+		log.WarnCtx(ctx, "can't resolve name", zap.Error(err))
+		return defaultLimit, nil
+	} else {
+		return increasedLimit, nil
+	}
 }
 
 func (p *publishService) Cleanup(ctx context.Context) error {

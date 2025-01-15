@@ -29,6 +29,7 @@ import (
 	"github.com/anyproto/anytype-publish-server/config"
 	"github.com/anyproto/anytype-publish-server/db"
 	"github.com/anyproto/anytype-publish-server/gateway"
+	"github.com/anyproto/anytype-publish-server/nameservice"
 	"github.com/anyproto/anytype-publish-server/publish"
 	"github.com/anyproto/anytype-publish-server/publish/publishrepo"
 	"github.com/anyproto/anytype-publish-server/store"
@@ -111,6 +112,7 @@ func Bootstrap(a *app.App) {
 		Register(peerservice.New()).
 		Register(coordinatorclient.New()).
 		Register(nameserviceclient.New()).
+		Register(nameservice.New()).
 		Register(nodeconfsource.New()).
 		Register(nodeconfstore.New()).
 		Register(nodeconf.New()).

@@ -30,8 +30,8 @@ type PublishRepo interface {
 	ResolveUri(ctx context.Context, identity, uri string) (publish domain.ObjectWithPublish, err error)
 	ResolvePublishUri(ctx context.Context, identity, uri string) (publish domain.Object, err error)
 	ListPublishes(ctx context.Context, identity string) ([]domain.ObjectWithPublish, error)
-	GetPublish(ctx context.Context, id primitive.ObjectID) (publish domain.Publish, err error)
-	FinalizePublish(ctx context.Context, publish domain.Publish) (err error)
+	GetPublish(ctx context.Context, id primitive.ObjectID) (publish domain.ObjectWithPublish, err error)
+	FinalizePublish(ctx context.Context, publish domain.ObjectWithPublish) (err error)
 	IterateReadyToDeleteIds(ctx context.Context, do func(id primitive.ObjectID) error) error
 	DeletePublish(ctx context.Context, id primitive.ObjectID) (err error)
 	DeleteOutdatedPublishes(ctx context.Context, before time.Time) (deletedCount int, err error)
@@ -262,19 +262,24 @@ func (p *publishRepo) markPublishToDelete(ctx context.Context, id primitive.Obje
 	return
 }
 
-func (p *publishRepo) GetPublish(ctx context.Context, id primitive.ObjectID) (publish domain.Publish, err error) {
-	if err = p.publishColl.FindOne(ctx, bson.D{{"_id", id}}).Decode(&publish); err != nil {
+func (p *publishRepo) GetPublish(ctx context.Context, id primitive.ObjectID) (publish domain.ObjectWithPublish, err error) {
+	var pub domain.Publish
+	if err = p.publishColl.FindOne(ctx, bson.D{{"_id", id}}).Decode(&pub); err != nil {
 		return
 	}
-	return
+	var obj domain.Object
+	if err = p.objectsColl.FindOne(ctx, bson.D{{"_id", pub.ObjectId}}).Decode(&obj); err != nil {
+		return
+	}
+	return domain.ObjectWithPublish{
+		Object:  obj,
+		Publish: &pub,
+	}, nil
 }
 
-func (p *publishRepo) FinalizePublish(ctx context.Context, publish domain.Publish) (err error) {
+func (p *publishRepo) FinalizePublish(ctx context.Context, publish domain.ObjectWithPublish) (err error) {
 	return p.db.Tx(ctx, func(ctx mongo.SessionContext) (err error) {
-		var obj domain.Object
-		if err = p.objectsColl.FindOne(ctx, bson.D{{"_id", publish.ObjectId}}).Decode(&obj); err != nil {
-			return
-		}
+		var obj = publish.Object
 		// mark previous publish to delete
 		if obj.ActivePublishId != nil {
 			if err = p.markPublishToDelete(ctx, *obj.ActivePublishId); err != nil {
@@ -284,10 +289,10 @@ func (p *publishRepo) FinalizePublish(ctx context.Context, publish domain.Publis
 		// update publish
 		if _, err = p.publishColl.UpdateOne(
 			ctx,
-			bson.D{{"_id", publish.Id}},
+			bson.D{{"_id", publish.Publish.Id}},
 			bson.D{{"$set", bson.D{
-				{"status", publish.Status},
-				{"size", publish.Size},
+				{"status", publish.Publish.Status},
+				{"size", publish.Publish.Size},
 			}}},
 		); err != nil {
 			return
@@ -295,9 +300,9 @@ func (p *publishRepo) FinalizePublish(ctx context.Context, publish domain.Publis
 		// update object
 		if _, err = p.objectsColl.UpdateOne(
 			ctx,
-			bson.D{{"_id", publish.ObjectId}},
+			bson.D{{"_id", obj.Id}},
 			bson.D{{"$set", bson.D{
-				{"activePublishId", publish.Id},
+				{"activePublishId", publish.Publish.Id},
 				{"updatedTimestamp", time.Now().Unix()},
 			}}},
 		); err != nil {

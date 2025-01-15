@@ -90,9 +90,9 @@ func TestPublishRepo_ObjectPublishStatus(t *testing.T) {
 		uploadKey := publishObj.Publish.UploadKey
 		publish, err := fx.GetPublish(ctx, publishObj.Publish.Id)
 		require.NoError(t, err)
-		assert.Equal(t, publish.UploadKey, uploadKey)
-		publish.Size = 123
-		publish.Status = domain.PublishStatusPublished
+		assert.Equal(t, publish.Publish.UploadKey, uploadKey)
+		publish.Publish.Size = 123
+		publish.Publish.Status = domain.PublishStatusPublished
 		require.NoError(t, fx.FinalizePublish(ctx, publish))
 		publishObj, err = fx.ObjectPublishStatus(ctx, obj)
 		require.NoError(t, err)
