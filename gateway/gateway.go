@@ -53,7 +53,7 @@ func (g *gateway) Init(a *app.App) (err error) {
 		g.mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 	}
 	g.mux.HandleFunc(`/name/{name}/{uri...}`, g.renderPageWithNameHandler)
-	g.mux.HandleFunc("/{name}/{uri...}", g.renderPageHandler)
+	g.mux.HandleFunc("/{identity}/{uri...}", g.renderPageHandler)
 	g.server = &http.Server{Addr: g.config.Addr, Handler: g.mux}
 	return
 }
@@ -79,18 +79,18 @@ func (g *gateway) renderPageWithNameHandler(w http.ResponseWriter, r *http.Reque
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	r.SetPathValue("name", identity)
-	g.renderPageHandler(w, r)
+	g.renderPage(r.Context(), w, identity, r.PathValue("uri"), true)
 }
 
 func (g *gateway) renderPageHandler(w http.ResponseWriter, r *http.Request) {
-	name := r.PathValue("name")
-	uri := r.PathValue("uri")
-	ctx := r.Context()
-	pub, err := g.publish.ResolveUriWithName(ctx, name, uri)
+	g.renderPage(r.Context(), w, r.PathValue("identity"), r.PathValue("uri"), false)
+}
+
+func (g *gateway) renderPage(ctx context.Context, w http.ResponseWriter, identity, uri string, withName bool) {
+	pub, err := g.publish.ResolveUriWithIdentity(ctx, identity, uri)
 	if err != nil {
 		if errors.Is(err, publishapi.ErrNotFound) {
-			http.NotFound(w, r)
+			http.NotFound(w, nil)
 			return
 		} else {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -98,7 +98,7 @@ func (g *gateway) renderPageHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if pub.ActivePublishId == nil {
-		http.NotFound(w, r)
+		http.NotFound(w, nil)
 		return
 	}
 
@@ -108,12 +108,19 @@ func (g *gateway) renderPageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var analyticsCode string
+	if withName {
+		analyticsCode = g.config.AnalyticsCodeMembers
+	} else {
+		analyticsCode = g.config.AnalyticsCode
+	}
+
 	config := renderer.RenderConfig{
 		StaticFilesPath:  g.config.StaticFilesURL,
 		PublishFilesPath: publicFilesPath,
 		PrismJsCdnUrl:    "https://cdn.jsdelivr.net/npm/prismjs@1.29.0",
 		AnytypeCdnUrl:    "https://anytype-static.fra1.cdn.digitaloceanspaces.com",
-		AnalyticsCode:    g.config.AnalyticsCode,
+		AnalyticsCode:    analyticsCode,
 	}
 
 	rend, err := renderer.NewRenderer(config)

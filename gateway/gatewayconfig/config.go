@@ -5,11 +5,12 @@ type ConfigGetter interface {
 }
 
 type Config struct {
-	Addr            string `yaml:"addr"`
-	Domain          string `yaml:"domain"`
-	StaticFilesURL  string `yaml:"staticFilesUrl"`
-	PublishFilesURL string `yaml:"publishFilesUrl"`
-	ServeStatic     bool   `yaml:"serveStatic"`
-	ServePublish    bool   `yaml:"servePublish"`
-	AnalyticsCode   string `yaml:"analyticsCode"`
+	Addr                 string `yaml:"addr"`
+	Domain               string `yaml:"domain"`
+	StaticFilesURL       string `yaml:"staticFilesUrl"`
+	PublishFilesURL      string `yaml:"publishFilesUrl"`
+	ServeStatic          bool   `yaml:"serveStatic"`
+	ServePublish         bool   `yaml:"servePublish"`
+	AnalyticsCode        string `yaml:"analyticsCode"`
+	AnalyticsCodeMembers string `yaml:"analyticsCodeMembers"`
 }

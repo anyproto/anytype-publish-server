@@ -24,6 +24,8 @@ gateway:
   serveStatic: true
   analyticsCode: >
     <script>console.log("sending dummy analytics from config...")</script>
+  analyticsCodeMembers: >
+    <script>console.log("sending dummy analytics from config (members)...")</script>
 
 yamux:
   listenAddrs:
