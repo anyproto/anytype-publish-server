@@ -12,3 +12,4 @@ jobs:
       release: ${{ github.event.release.tag_name }}
       dockerfile-run: apt-get update && apt-get install -y ca-certificates
       dockerfile-cmd: '["/bin/anytype-publish-server", "-c", "/etc/anytype-publish-server/config.yml"]'
+      deploy-on-docker-hub: false
