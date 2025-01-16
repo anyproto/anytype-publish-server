@@ -5,6 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
+
+	"github.com/anyproto/any-sync/metric"
+	"github.com/anyproto/any-sync/net/peer"
+	"go.uber.org/zap"
 
 	"github.com/anyproto/anytype-publish-server/domain"
 	"github.com/anyproto/anytype-publish-server/publishclient/publishapi"
@@ -16,7 +21,15 @@ type rpcHandler struct {
 	s *publishService
 }
 
-func (r rpcHandler) ResolveUri(ctx context.Context, req *publishapi.ResolveUriRequest) (*publishapi.ResolveUriResponse, error) {
+func (r rpcHandler) ResolveUri(ctx context.Context, req *publishapi.ResolveUriRequest) (resp *publishapi.ResolveUriResponse, err error) {
+	st := time.Now()
+	defer func() {
+		r.s.metric.RequestLog(ctx, "publish.resolveUri",
+			metric.TotalDur(time.Since(st)),
+			zap.String("addr", peer.CtxPeerAddr(ctx)),
+			zap.Error(err),
+		)
+	}()
 	obj, err := r.s.ResolveUri(ctx, req.Uri)
 	if err != nil {
 		return nil, err
@@ -26,7 +39,18 @@ func (r rpcHandler) ResolveUri(ctx context.Context, req *publishapi.ResolveUriRe
 	}, nil
 }
 
-func (r rpcHandler) GetPublishStatus(ctx context.Context, req *publishapi.GetPublishStatusRequest) (*publishapi.GetPublishStatusResponse, error) {
+func (r rpcHandler) GetPublishStatus(ctx context.Context, req *publishapi.GetPublishStatusRequest) (resp *publishapi.GetPublishStatusResponse, err error) {
+	st := time.Now()
+	defer func() {
+		r.s.metric.RequestLog(ctx, "publish.getPublishStatus",
+			metric.TotalDur(time.Since(st)),
+			metric.ObjectId(req.ObjectId),
+			metric.SpaceId(req.SpaceId),
+			zap.String("addr", peer.CtxPeerAddr(ctx)),
+			zap.Error(err),
+		)
+	}()
+
 	obj, err := r.s.GetPublishStatus(ctx, req.SpaceId, req.ObjectId)
 	if err != nil {
 		return nil, err
@@ -36,7 +60,18 @@ func (r rpcHandler) GetPublishStatus(ctx context.Context, req *publishapi.GetPub
 	}, nil
 }
 
-func (r rpcHandler) Publish(ctx context.Context, req *publishapi.PublishRequest) (*publishapi.PublishResponse, error) {
+func (r rpcHandler) Publish(ctx context.Context, req *publishapi.PublishRequest) (resp *publishapi.PublishResponse, err error) {
+	st := time.Now()
+	defer func() {
+		r.s.metric.RequestLog(ctx, "publish.publish",
+			metric.TotalDur(time.Since(st)),
+			metric.ObjectId(req.ObjectId),
+			metric.SpaceId(req.SpaceId),
+			zap.String("addr", peer.CtxPeerAddr(ctx)),
+			zap.Error(err),
+		)
+	}()
+
 	uploadUrl, err := r.s.Publish(ctx, domain.Object{SpaceId: req.SpaceId, ObjectId: req.ObjectId, Uri: req.Uri}, req.Version)
 	if err != nil {
 		return nil, err
@@ -47,18 +82,37 @@ func (r rpcHandler) Publish(ctx context.Context, req *publishapi.PublishRequest)
 }
 
 func (r rpcHandler) UnPublish(ctx context.Context, req *publishapi.UnPublishRequest) (resp *publishapi.Ok, err error) {
+	st := time.Now()
+	defer func() {
+		r.s.metric.RequestLog(ctx, "publish.unpublish",
+			metric.TotalDur(time.Since(st)),
+			metric.ObjectId(req.ObjectId),
+			metric.SpaceId(req.SpaceId),
+			zap.String("addr", peer.CtxPeerAddr(ctx)),
+			zap.Error(err),
+		)
+	}()
 	if err = r.s.UnPublish(ctx, domain.Object{SpaceId: req.SpaceId, ObjectId: req.ObjectId}); err != nil {
 		return
 	}
 	return &publishapi.Ok{}, nil
 }
 
-func (r rpcHandler) ListPublishes(ctx context.Context, req *publishapi.ListPublishesRequest) (*publishapi.ListPublishesResponse, error) {
+func (r rpcHandler) ListPublishes(ctx context.Context, req *publishapi.ListPublishesRequest) (resp *publishapi.ListPublishesResponse, err error) {
+	st := time.Now()
+	defer func() {
+		r.s.metric.RequestLog(ctx, "publish.listPublishes",
+			metric.TotalDur(time.Since(st)),
+			metric.SpaceId(req.SpaceId),
+			zap.String("addr", peer.CtxPeerAddr(ctx)),
+			zap.Error(err),
+		)
+	}()
 	list, err := r.s.ListPublishes(ctx)
 	if err != nil {
 		return nil, err
 	}
-	resp := &publishapi.ListPublishesResponse{
+	resp = &publishapi.ListPublishesResponse{
 		Publishes: make([]*publishapi.Publish, len(list)),
 	}
 	for i := range list {
@@ -96,15 +150,25 @@ func (h httpHandler) init(m *http.ServeMux) {
 }
 
 func (h httpHandler) Upload(w http.ResponseWriter, r *http.Request) {
+	var err error
+	st := time.Now()
+	defer func() {
+		h.s.metric.RequestLog(r.Context(), "publish.upload",
+			metric.TotalDur(time.Since(st)),
+			zap.Error(err),
+		)
+	}()
 	if r.Method != http.MethodPost {
-		writeErr(w, http.StatusMethodNotAllowed, errors.New("method not allowed"))
+		err = errors.New("method not allowed")
+		writeErr(w, http.StatusMethodNotAllowed, err)
 		return
 	}
 
 	defer func() {
 		_ = r.Body.Close()
 	}()
-	if url, err := h.s.UploadTar(r.Context(), r.PathValue("publishId"), r.PathValue("uploadKey"), r.Body); err != nil {
+	var url string
+	if url, err = h.s.UploadTar(r.Context(), r.PathValue("publishId"), r.PathValue("uploadKey"), r.Body); err != nil {
 		writeErr(w, http.StatusInternalServerError, err)
 	} else {
 		w.Header().Set("Content-Type", "application/json")

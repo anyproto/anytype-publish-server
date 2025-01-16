@@ -15,6 +15,7 @@ import (
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/coordinator/coordinatorclient"
 	"github.com/anyproto/any-sync/coordinator/nodeconfsource"
+	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/nameservice/nameserviceclient"
 	"github.com/anyproto/any-sync/net/peerservice"
 	"github.com/anyproto/any-sync/net/pool"
@@ -29,6 +30,7 @@ import (
 	"github.com/anyproto/anytype-publish-server/config"
 	"github.com/anyproto/anytype-publish-server/db"
 	"github.com/anyproto/anytype-publish-server/gateway"
+	"github.com/anyproto/anytype-publish-server/nameservice"
 	"github.com/anyproto/anytype-publish-server/publish"
 	"github.com/anyproto/anytype-publish-server/publish/publishrepo"
 	"github.com/anyproto/anytype-publish-server/store"
@@ -105,12 +107,14 @@ func main() {
 
 func Bootstrap(a *app.App) {
 	a.Register(db.New()).
+		Register(metric.New()).
 		Register(server.New()).
 		Register(account.New()).
 		Register(pool.New()).
 		Register(peerservice.New()).
 		Register(coordinatorclient.New()).
 		Register(nameserviceclient.New()).
+		Register(nameservice.New()).
 		Register(nodeconfsource.New()).
 		Register(nodeconfstore.New()).
 		Register(nodeconf.New()).
