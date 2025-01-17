@@ -5,7 +5,7 @@ go 1.23.2
 require (
 	github.com/ahmetb/govvv v0.3.0
 	github.com/anyproto/any-sync v0.5.25
-	github.com/anyproto/anytype-publish-renderer v0.1.0
+	github.com/anyproto/anytype-publish-renderer v0.1.1
 	github.com/anyproto/anytype-publish-server/publishclient v0.0.0-00010101000000-000000000000
 	github.com/aws/aws-sdk-go-v2 v1.32.6
 	github.com/aws/aws-sdk-go-v2/config v1.28.6
@@ -51,13 +51,13 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
+	github.com/globalsign/mgo v0.0.0-20181015135952-eeefdecb41b8 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb // indirect
 	github.com/google/pprof v0.0.0-20241210010833-40e02aabc2ad // indirect
 	github.com/hashicorp/yamux v0.1.2 // indirect
-	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/ipfs/go-cid v0.4.1 // indirect
 	github.com/ipfs/go-log/v2 v2.5.1 // indirect
 	github.com/jbenet/go-temp-err-catcher v0.1.0 // indirect
@@ -88,8 +88,6 @@ require (
 	github.com/quic-go/quic-go v0.48.2 // indirect
 	github.com/samber/lo v1.47.0 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
-	github.com/spf13/cobra v1.8.1 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/tyler-smith/go-bip39 v1.1.0 // indirect
 	github.com/valyala/fastjson v1.6.4 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
