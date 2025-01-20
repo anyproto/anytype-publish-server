@@ -99,6 +99,12 @@ func TestPublishRepo_ObjectPublishStatus(t *testing.T) {
 		require.NotNil(t, publishObj.Publish)
 		assert.Equal(t, domain.PublishStatusPublished, publishObj.Publish.Status)
 		assert.Equal(t, int64(123), publishObj.Publish.Size)
+
+		list, err := fx.ListPublishes(ctx, obj.Identity)
+		require.NoError(t, err)
+		require.Len(t, list, 1)
+		require.NotNil(t, list[0].Publish)
+		assert.Equal(t, domain.PublishStatusPublished, list[0].Publish.Status)
 	})
 }
 

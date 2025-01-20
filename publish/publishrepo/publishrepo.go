@@ -223,11 +223,11 @@ func (p *publishRepo) ListPublishes(ctx context.Context, identity string) ([]dom
 	var publishes []domain.ObjectWithPublish
 	for cur.Next(ctx) {
 		var publish domain.ObjectWithPublish
-		if err = cur.Decode(&publish.Publish); err != nil {
+		if err = cur.Decode(&publish.Object); err != nil {
 			return nil, err
 		}
 		if publish.ActivePublishId != nil {
-			publish.Publish = &domain.Publish{}
+			_ = p.publishColl.FindOne(ctx, bson.D{{"_id", *publish.ActivePublishId}}).Decode(&publish.Publish)
 		}
 		publishes = append(publishes, publish)
 	}
