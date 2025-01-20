@@ -29,7 +29,7 @@ type PublishRepo interface {
 	ObjectPublishStatus(ctx context.Context, object domain.Object) (publish domain.ObjectWithPublish, err error)
 	ResolveUri(ctx context.Context, identity, uri string) (publish domain.ObjectWithPublish, err error)
 	ResolvePublishUri(ctx context.Context, identity, uri string) (publish domain.Object, err error)
-	ListPublishes(ctx context.Context, identity string) ([]domain.ObjectWithPublish, error)
+	ListPublishes(ctx context.Context, identity string, spaceId string) ([]domain.ObjectWithPublish, error)
 	GetPublish(ctx context.Context, id primitive.ObjectID) (publish domain.ObjectWithPublish, err error)
 	FinalizePublish(ctx context.Context, publish domain.ObjectWithPublish) (err error)
 	IterateReadyToDeleteIds(ctx context.Context, do func(id primitive.ObjectID) error) error
@@ -212,8 +212,12 @@ func (p *publishRepo) getPublishByQuery(ctx context.Context, query any, withPubl
 	return
 }
 
-func (p *publishRepo) ListPublishes(ctx context.Context, identity string) ([]domain.ObjectWithPublish, error) {
-	cur, err := p.objectsColl.Find(ctx, bson.D{{"identity", identity}})
+func (p *publishRepo) ListPublishes(ctx context.Context, identity string, spaceId string) ([]domain.ObjectWithPublish, error) {
+	filter := bson.D{{"identity", identity}}
+	if spaceId != "" {
+		filter = append(filter, bson.E{Key: "spaceId", Value: spaceId})
+	}
+	cur, err := p.objectsColl.Find(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
