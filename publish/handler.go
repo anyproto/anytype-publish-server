@@ -108,7 +108,7 @@ func (r rpcHandler) ListPublishes(ctx context.Context, req *publishapi.ListPubli
 			zap.Error(err),
 		)
 	}()
-	list, err := r.s.ListPublishes(ctx)
+	list, err := r.s.ListPublishes(ctx, req.SpaceId)
 	if err != nil {
 		return nil, err
 	}

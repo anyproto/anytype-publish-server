@@ -131,12 +131,12 @@ func (p *publishService) UnPublish(ctx context.Context, object domain.Object) (e
 	return p.repo.ObjectDelete(ctx, object)
 }
 
-func (p *publishService) ListPublishes(ctx context.Context) (list []domain.ObjectWithPublish, err error) {
+func (p *publishService) ListPublishes(ctx context.Context, spaceId string) (list []domain.ObjectWithPublish, err error) {
 	identity, err := p.checkIdentity(ctx)
 	if err != nil {
 		return
 	}
-	return p.repo.ListPublishes(ctx, identity)
+	return p.repo.ListPublishes(ctx, identity, spaceId)
 }
 
 func (p *publishService) UploadTar(ctx context.Context, publishId, uploadKey string, reader io.Reader) (resultUrl string, err error) {
