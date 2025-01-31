@@ -146,6 +146,7 @@ func (p *publishClient) UploadDir(ctx context.Context, uploadUrl, dir string) (e
 			if err != nil {
 				return err
 			}
+			relPath = filepath.ToSlash(relPath)
 			header.Name = relPath
 
 			// Write the header
