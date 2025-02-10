@@ -13,8 +13,8 @@ github.com/anyproto/any-sync v0.5.25 h1:v59eQ+C7YOKC18G1PVql17fuc42Mvgb7c7Ju855t
 github.com/anyproto/any-sync v0.5.25/go.mod h1:NKQZqnU7NzOOjDQc/rKmiRmRDCrARdlEnVLYwWqTcfM=
 github.com/anyproto/anytype-heart v0.38.9 h1:FhxRjzjV2L2Qi4HxECg14Q/gmimrsTtDM1U19UqFmDM=
 github.com/anyproto/anytype-heart v0.38.9/go.mod h1:eaY7gFVkyFx8d/84RpbRClvNQ8lBTuJc3bhjk31sGnY=
-github.com/anyproto/anytype-publish-renderer v0.3.1 h1:ye4VicJkjT3/hn7f7g1zOBszF4kobAond+EbmnadG/s=
-github.com/anyproto/anytype-publish-renderer v0.3.1/go.mod h1:Q3DTJ/O4mpluu5CpGTjaYXUGdYUGNbhpH6UMKlcAGTQ=
+github.com/anyproto/anytype-publish-renderer v0.3.2 h1:ZUa8v1oc6VbTFQQa48koqU+F5tsHBbPULSBXD8zg/Q0=
+github.com/anyproto/anytype-publish-renderer v0.3.2/go.mod h1:Q3DTJ/O4mpluu5CpGTjaYXUGdYUGNbhpH6UMKlcAGTQ=
 github.com/anyproto/go-chash v0.1.0 h1:I9meTPjXFRfXZHRJzjOHC/XF7Q5vzysKkiT/grsogXY=
 github.com/anyproto/go-chash v0.1.0/go.mod h1:0UjNQi3PDazP0fINpFYu6VKhuna+W/V+1vpXHAfNgLY=
 github.com/anyproto/go-gelf v0.0.0-20210418191311-774bd5b016e7 h1:SyEu5uxZ5nKHEJ6TPKQqjM+T00SYi0MW1VaLzqZtZ9E=
