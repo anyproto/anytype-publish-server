@@ -5,7 +5,7 @@ go 1.23.2
 require (
 	github.com/ahmetb/govvv v0.3.0
 	github.com/anyproto/any-sync v0.5.25
-	github.com/anyproto/anytype-publish-renderer v0.2.1
+	github.com/anyproto/anytype-publish-renderer v0.3.0
 	github.com/anyproto/anytype-publish-server/publishclient v0.0.0-00010101000000-000000000000
 	github.com/aws/aws-sdk-go-v2 v1.32.6
 	github.com/aws/aws-sdk-go-v2/config v1.28.6
@@ -20,7 +20,7 @@ require (
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
-	github.com/a-h/templ v0.3.819 // indirect
+	github.com/a-h/templ v0.3.833 // indirect
 	github.com/anyproto/any-store v0.1.3 // indirect
 	github.com/anyproto/anytype-heart v0.38.9 // indirect
 	github.com/anyproto/go-chash v0.1.0 // indirect
@@ -51,7 +51,6 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
-	github.com/globalsign/mgo v0.0.0-20181015135952-eeefdecb41b8 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
