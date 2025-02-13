@@ -288,10 +288,16 @@ func (g *gateway) renderPage(ctx context.Context, id cacheId) (*pageObject, erro
 }
 
 func (g *gateway) invalidateCache(identity, uri string) {
+	withName := string(newCacheId(identity, uri, true))
+	withoutName := string(newCacheId(identity, uri, false))
 	err := g.redisClient.Del(
 		context.Background(),
-		string(newCacheId(identity, uri, false)),
-		string(newCacheId(identity, uri, true)),
+		withName+":rver",
+		withName+":notfound",
+		withName+":body",
+		withoutName+":rver",
+		withoutName+":notfound",
+		withoutName+":body",
 	).Err()
 	if err != nil {
 		log.Error("cache invalidate error", zap.Error(err))
