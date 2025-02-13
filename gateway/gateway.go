@@ -152,10 +152,11 @@ func (g *gateway) handlePage(ctx context.Context, w http.ResponseWriter, identit
 }
 
 func (g *gateway) cacheGet(ctx context.Context, key cacheId) (res *pageObject, err error) {
-	results, err := g.redisClient.Pipelined(ctx, func(pipe redis.Pipeliner) error {
-		pipe.GetEx(ctx, string(key)+":rver", time.Hour)
-		pipe.GetEx(ctx, string(key)+":notfound", time.Hour)
-		pipe.GetEx(ctx, string(key)+":body", time.Hour)
+	var results = make([]*redis.StringCmd, 3)
+	_, err = g.redisClient.Pipelined(ctx, func(pipe redis.Pipeliner) error {
+		results[0] = pipe.GetEx(ctx, string(key)+":rver", time.Hour)
+		results[1] = pipe.GetEx(ctx, string(key)+":notfound", time.Hour)
+		results[2] = pipe.GetEx(ctx, string(key)+":body", time.Hour)
 		return nil
 	})
 
@@ -171,9 +172,9 @@ func (g *gateway) cacheGet(ctx context.Context, key cacheId) (res *pageObject, e
 	}
 
 	obj := &pageObject{
-		Body:       results[2].String(),
-		IsNotFound: results[1].String() == "1",
-		RenderVer:  results[0].String(),
+		Body:       results[2].Val(),
+		IsNotFound: results[1].Val() == "1",
+		RenderVer:  results[0].Val(),
 	}
 
 	return obj, nil
