@@ -122,7 +122,7 @@ func (g *gateway) handlePage(ctx context.Context, w http.ResponseWriter, identit
 	)
 
 	// we ignore cache if render version mismatch
-	if !isCacheMissed && pageObj.RenderVer != g.renderVersion {
+	if !isCacheMissed && !pageObj.IsNotFound && pageObj.RenderVer != g.renderVersion {
 		isCacheMissed = true
 	}
 
@@ -256,7 +256,10 @@ func (g *gateway) renderPage(ctx context.Context, id cacheId) (*pageObject, erro
 	if err = rend.Render(buf); err != nil {
 		return nil, err
 	}
-	return &pageObject{Body: buf.String()}, nil
+	return &pageObject{
+		Body:      buf.String(),
+		RenderVer: g.renderVersion,
+	}, nil
 }
 
 func (g *gateway) invalidateCache(identity, uri string) {
