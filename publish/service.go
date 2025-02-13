@@ -44,17 +44,19 @@ func New() Service {
 
 type Service interface {
 	ResolveUriWithIdentity(ctx context.Context, name, uri string) (publish domain.Object, err error)
+	SetInvalidateCacheCallback(f func(identity, uri string))
 	app.ComponentRunnable
 }
 
 type publishService struct {
-	config        Config
-	gatewayConfig gatewayconfig.Config
-	store         store.Store
-	repo          publishrepo.PublishRepo
-	ticker        periodicsync.PeriodicSync
-	nameService   nameservice.NameService
-	metric        metric.Metric
+	config         Config
+	gatewayConfig  gatewayconfig.Config
+	store          store.Store
+	repo           publishrepo.PublishRepo
+	ticker         periodicsync.PeriodicSync
+	nameService    nameservice.NameService
+	metric         metric.Metric
+	invalidateFunc func(identity string, uri string)
 }
 
 func (p *publishService) Init(a *app.App) (err error) {
@@ -90,6 +92,16 @@ func (p *publishService) Run(ctx context.Context) (err error) {
 
 func (p *publishService) Name() (name string) {
 	return CName
+}
+
+func (p *publishService) SetInvalidateCacheCallback(f func(identity, uri string)) {
+	p.invalidateFunc = f
+}
+
+func (p *publishService) invalidateCache(identity, uri string) {
+	if p.invalidateFunc != nil {
+		p.invalidateFunc(identity, uri)
+	}
 }
 
 func (p *publishService) ResolveUri(ctx context.Context, uri string) (publish domain.ObjectWithPublish, err error) {
@@ -128,7 +140,12 @@ func (p *publishService) UnPublish(ctx context.Context, object domain.Object) (e
 	if object.Identity, err = p.checkIdentity(ctx); err != nil {
 		return
 	}
-	return p.repo.ObjectDelete(ctx, object)
+	uri, err := p.repo.ObjectDelete(ctx, object)
+	if err != nil {
+		return err
+	}
+	p.invalidateCache(object.Identity, uri)
+	return
 }
 
 func (p *publishService) ListPublishes(ctx context.Context, spaceId string) (list []domain.ObjectWithPublish, err error) {
@@ -176,6 +193,7 @@ func (p *publishService) UploadTar(ctx context.Context, publishId, uploadKey str
 	if err = p.repo.FinalizePublish(ctx, objWithPub); err != nil {
 		return
 	}
+	p.invalidateCache(objWithPub.Identity, objWithPub.Uri)
 	return url.JoinPath("https://", p.gatewayConfig.Domain, publish.ObjectId)
 }
 

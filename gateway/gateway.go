@@ -1,15 +1,18 @@
 package gateway
 
 import (
+	"bytes"
 	"context"
 	"errors"
-	"fmt"
+	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/anytype-publish-renderer/renderer"
 	"go.uber.org/zap"
 
@@ -37,6 +40,7 @@ type gateway struct {
 	publish     publish.Service
 	config      gatewayconfig.Config
 	nameService nameservice.NameService
+	cache       ocache.OCache
 }
 
 func (g *gateway) Name() (name string) {
@@ -49,6 +53,8 @@ func (g *gateway) Init(a *app.App) (err error) {
 	g.config = a.MustComponent("config").(gatewayconfig.ConfigGetter).GetGateway()
 	g.mux = http.NewServeMux()
 
+	g.cache = ocache.New(g.loadCachedPage, ocache.WithTTL(time.Hour))
+
 	if g.config.ServeStatic {
 		g.mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 	}
@@ -59,6 +65,7 @@ func (g *gateway) Init(a *app.App) (err error) {
 }
 
 func (g *gateway) Run(ctx context.Context) (err error) {
+	g.publish.SetInvalidateCacheCallback(g.invalidateCache)
 	var errCh = make(chan error)
 	go func() {
 		errCh <- g.server.ListenAndServe()
@@ -87,29 +94,58 @@ func (g *gateway) renderPageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (g *gateway) renderPage(ctx context.Context, w http.ResponseWriter, identity, uri string, withName bool) {
-	pub, err := g.publish.ResolveUriWithIdentity(ctx, identity, uri)
+	id := newCacheId(identity, uri, withName)
+	obj, err := g.cache.Get(ctx, string(id))
 	if err != nil {
-		if errors.Is(err, publishapi.ErrNotFound) {
-			http.NotFound(w, nil)
-			return
-		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		log.Error("page load error", zap.Error(err))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
 	}
-	if pub.ActivePublishId == nil {
+	cObject := obj.(*cacheObject)
+	if cObject.isNotFound {
 		http.NotFound(w, nil)
 		return
 	}
 
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_, err = io.Copy(w, bytes.NewReader(cObject.body))
+	if err != nil {
+		log.Error("page write error", zap.Error(err))
+	}
+}
+
+func (g *gateway) getIdentity(ctx context.Context, name string) (identity string, err error) {
+	obj, err := g.nameService.ResolveName(ctx, name)
+	if err != nil {
+		return "", err
+	}
+	return obj.OwnerAnyAddress, nil
+}
+
+func (g *gateway) loadCachedPage(ctx context.Context, id string) (ocache.Object, error) {
+	cId := cacheId(id)
+	identity := cId.Identity()
+	uri := cId.Uri()
+	pub, err := g.publish.ResolveUriWithIdentity(ctx, identity, uri)
+	if err != nil {
+		if errors.Is(err, publishapi.ErrNotFound) {
+			return &cacheObject{isNotFound: true}, nil
+		} else {
+			return nil, err
+		}
+	}
+	if pub.ActivePublishId == nil {
+		return &cacheObject{isNotFound: true}, nil
+	}
+
 	publicFilesPath, err := url.JoinPath(g.config.PublishFilesURL, pub.ActivePublishId.Hex())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return nil, err
 	}
 
 	var analyticsCode string
-	if withName {
+	if cId.WithName() {
 		analyticsCode = g.config.AnalyticsCodeMembers
 	} else {
 		analyticsCode = g.config.AnalyticsCode
@@ -125,25 +161,89 @@ func (g *gateway) renderPage(ctx context.Context, w http.ResponseWriter, identit
 
 	rend, err := renderer.NewRenderer(config)
 	if err != nil {
-		fmt.Printf("Error creating renderer: %v\n", err)
-		return
+		return nil, err
 	}
-	w.Header().Set("Content-Type", "text/html")
-	if err = rend.Render(w); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+	var buf = bytes.NewBuffer(make([]byte, 0, 5*1024))
+	if err = rend.Render(buf); err != nil {
+		return nil, err
 	}
+	return &cacheObject{body: buf.Bytes()}, nil
 }
 
-func (g *gateway) getIdentity(ctx context.Context, name string) (identity string, err error) {
-	obj, err := g.nameService.ResolveName(ctx, name)
-	if err != nil {
-		return "", err
-	}
-	return obj.OwnerAnyAddress, nil
+func (g *gateway) invalidateCache(identity, uri string) {
+	_, _ = g.cache.Remove(context.Background(), string(newCacheId(identity, uri, false)))
+	_, _ = g.cache.Remove(context.Background(), string(newCacheId(identity, uri, true)))
 }
 
 func (g *gateway) Close(ctx context.Context) (err error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
+	_ = g.cache.Close()
 	return g.server.Shutdown(ctx)
+}
+
+var cacheIdSep = string([]byte{0})
+
+func newCacheId(identity, uri string, withName bool) cacheId {
+	var res strings.Builder
+	res.WriteString(identity)
+	res.WriteString(cacheIdSep)
+	res.WriteString(uri)
+	res.WriteString(cacheIdSep)
+	if withName {
+		res.WriteString("1")
+	} else {
+		res.WriteString("0")
+	}
+	return cacheId(res.String())
+}
+
+type cacheId string
+
+func (c cacheId) Identity() string {
+	return c.getElement(1)
+}
+
+func (c cacheId) Uri() string {
+	return c.getElement(2)
+}
+
+func (c cacheId) WithName() bool {
+	return c.getElement(3) == "1"
+}
+
+func (c cacheId) String() string {
+	return strings.ReplaceAll(string(c), cacheIdSep, "/")
+}
+
+func (c cacheId) getElement(idx int) string {
+	var prevIdx int
+	for i := range idx {
+		curIdx := strings.Index(string(c[prevIdx:]), cacheIdSep)
+		if curIdx == -1 {
+			if i+1 == idx {
+				return string(c[prevIdx:])
+			}
+			return ""
+		}
+		if i+1 == idx {
+			return string(c[prevIdx : curIdx+prevIdx])
+		}
+		prevIdx = prevIdx + curIdx + 1
+	}
+	return ""
+}
+
+type cacheObject struct {
+	body       []byte
+	isNotFound bool
+}
+
+func (c *cacheObject) Close() (err error) {
+	return
+}
+
+func (c *cacheObject) TryClose(objectTTL time.Duration) (res bool, err error) {
+	return true, nil
 }
