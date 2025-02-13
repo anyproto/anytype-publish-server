@@ -3,7 +3,6 @@ package gateway
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -106,7 +105,7 @@ func (g *gateway) renderPageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (g *gateway) handlePage(ctx context.Context, w http.ResponseWriter, identity, uri string, withName bool) {
-	id := newCacheId(identity, uri, g.renderVersion, withName)
+	id := newCacheId(identity, uri, withName)
 
 	pageObj, cacheErr := g.cacheGet(ctx, id)
 	if cacheErr != nil {
@@ -121,6 +120,11 @@ func (g *gateway) handlePage(ctx context.Context, w http.ResponseWriter, identit
 		isCacheMissed = pageObj == nil
 		err           error
 	)
+
+	// we ignore cache if render version mismatch
+	if !isCacheMissed && pageObj.RenderVer != g.renderVersion {
+		isCacheMissed = true
+	}
 
 	if isCacheMissed {
 		if pageObj, err = g.renderPage(ctx, id); err != nil {
@@ -148,23 +152,55 @@ func (g *gateway) handlePage(ctx context.Context, w http.ResponseWriter, identit
 }
 
 func (g *gateway) cacheGet(ctx context.Context, key cacheId) (res *pageObject, err error) {
-	resultJson, err := g.redisClient.Get(ctx, string(key)).Result()
+	results, err := g.redisClient.Pipelined(ctx, func(pipe redis.Pipeliner) error {
+		pipe.GetEx(ctx, string(key)+":rver", time.Hour)
+		pipe.GetEx(ctx, string(key)+":notfound", time.Hour)
+		pipe.GetEx(ctx, string(key)+":body", time.Hour)
+		return nil
+	})
+
 	if err != nil {
-		return nil, err
+		return
 	}
-	var obj pageObject
-	if err = json.Unmarshal([]byte(resultJson), &obj); err != nil {
-		return nil, err
+
+	for _, r := range results {
+		if r.Err() != nil {
+			err = r.Err()
+			return
+		}
 	}
-	return &obj, nil
+
+	obj := &pageObject{
+		Body:       results[2].String(),
+		IsNotFound: results[1].String() == "1",
+		RenderVer:  results[0].String(),
+	}
+
+	return obj, nil
 }
 
 func (g *gateway) cacheSet(ctx context.Context, key cacheId, data *pageObject) (err error) {
-	dataJson, err := json.Marshal(data)
+	results, err := g.redisClient.Pipelined(ctx, func(pipe redis.Pipeliner) error {
+		isNotFound := "0"
+		if data.IsNotFound {
+			isNotFound = "1"
+		}
+		pipe.SetEx(ctx, string(key)+":rver", data.RenderVer, time.Hour)
+		pipe.SetEx(ctx, string(key)+":notfound", isNotFound, time.Hour)
+		pipe.SetEx(ctx, string(key)+":body", data.Body, time.Hour)
+		return nil
+	})
+
 	if err != nil {
 		return err
 	}
-	return g.redisClient.SetEx(ctx, string(key), dataJson, time.Hour).Err()
+	for _, r := range results {
+		if r.Err() != nil {
+			err = r.Err()
+			return
+		}
+	}
+	return nil
 }
 
 func (g *gateway) getIdentity(ctx context.Context, name string) (identity string, err error) {
@@ -226,8 +262,8 @@ func (g *gateway) renderPage(ctx context.Context, id cacheId) (*pageObject, erro
 func (g *gateway) invalidateCache(identity, uri string) {
 	err := g.redisClient.Del(
 		context.Background(),
-		string(newCacheId(identity, uri, g.renderVersion, false)),
-		string(newCacheId(identity, uri, g.renderVersion, true)),
+		string(newCacheId(identity, uri, false)),
+		string(newCacheId(identity, uri, true)),
 	).Err()
 	if err != nil {
 		log.Error("cache invalidate error", zap.Error(err))
@@ -242,7 +278,7 @@ func (g *gateway) Close(ctx context.Context) (err error) {
 
 var cacheIdSep = string([]byte{0})
 
-func newCacheId(identity, uri, renderVersion string, withName bool) cacheId {
+func newCacheId(identity, uri string, withName bool) cacheId {
 	var res strings.Builder
 	res.WriteString(identity)
 	res.WriteString(cacheIdSep)
@@ -253,8 +289,6 @@ func newCacheId(identity, uri, renderVersion string, withName bool) cacheId {
 	} else {
 		res.WriteString("0")
 	}
-	res.WriteString(cacheIdSep)
-	res.WriteString(renderVersion)
 	return cacheId(res.String())
 }
 
@@ -300,6 +334,7 @@ func (c cacheId) getElement(idx int) string {
 
 type pageObject struct {
 	Body       string
+	RenderVer  string
 	IsNotFound bool
 }
 
