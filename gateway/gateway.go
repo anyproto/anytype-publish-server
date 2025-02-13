@@ -11,10 +11,12 @@ import (
 	"runtime/debug"
 	"strings"
 	"time"
+	"unsafe"
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/anytype-publish-renderer/renderer"
+	"github.com/golang/snappy"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
@@ -171,8 +173,26 @@ func (g *gateway) cacheGet(ctx context.Context, key cacheId) (res *pageObject, e
 		}
 	}
 
+	var n int
+	var decodedBody string
+	dataBody := results[2].Val()
+	bodyBytes := unsafe.Slice(unsafe.StringData(dataBody), len(dataBody))
+
+	if n, err = snappy.DecodedLen(bodyBytes); err == nil {
+		bodyBuf := make([]byte, n)
+		var decoded []byte
+		decoded, err = snappy.Decode(bodyBuf, bodyBytes)
+		if err == nil {
+			decodedBody = unsafe.String(unsafe.SliceData(decoded), len(decoded))
+		} else {
+			return
+		}
+	} else {
+		return
+	}
+
 	obj := &pageObject{
-		Body:       results[2].Val(),
+		Body:       decodedBody,
 		IsNotFound: results[1].Val() == "1",
 		RenderVer:  results[0].Val(),
 	}
@@ -188,7 +208,11 @@ func (g *gateway) cacheSet(ctx context.Context, key cacheId, data *pageObject) (
 		}
 		pipe.SetEx(ctx, string(key)+":rver", data.RenderVer, time.Hour)
 		pipe.SetEx(ctx, string(key)+":notfound", isNotFound, time.Hour)
-		pipe.SetEx(ctx, string(key)+":body", data.Body, time.Hour)
+
+		bodyBytes := unsafe.Slice(unsafe.StringData(data.Body), len(data.Body))
+		sBody := snappy.Encode(nil, bodyBytes)
+		log.Debug("body size", zap.Int("before", len(data.Body)), zap.Int("after", len(sBody)))
+		pipe.SetEx(ctx, string(key)+":body", sBody, time.Hour)
 		return nil
 	})
 
