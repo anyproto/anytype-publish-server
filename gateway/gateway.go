@@ -156,9 +156,10 @@ func (g *gateway) handlePage(ctx context.Context, w http.ResponseWriter, identit
 func (g *gateway) cacheGet(ctx context.Context, key cacheId) (res *pageObject, err error) {
 	var results = make([]*redis.StringCmd, 3)
 	_, err = g.redisClient.Pipelined(ctx, func(pipe redis.Pipeliner) error {
-		results[0] = pipe.GetEx(ctx, string(key)+":rver", time.Hour)
-		results[1] = pipe.GetEx(ctx, string(key)+":notfound", time.Hour)
-		results[2] = pipe.GetEx(ctx, string(key)+":body", time.Hour)
+		redisKey := "{" + string(key) + "}"
+		results[0] = pipe.GetEx(ctx, redisKey+":rver", time.Hour)
+		results[1] = pipe.GetEx(ctx, redisKey+":notfound", time.Hour)
+		results[2] = pipe.GetEx(ctx, redisKey+":body", time.Hour)
 		return nil
 	})
 
@@ -206,13 +207,14 @@ func (g *gateway) cacheSet(ctx context.Context, key cacheId, data *pageObject) (
 		if data.IsNotFound {
 			isNotFound = "1"
 		}
-		pipe.SetEx(ctx, string(key)+":rver", data.RenderVer, time.Hour)
-		pipe.SetEx(ctx, string(key)+":notfound", isNotFound, time.Hour)
+		redisKey := "{" + string(key) + "}"
+		pipe.SetEx(ctx, redisKey+":rver", data.RenderVer, time.Hour)
+		pipe.SetEx(ctx, redisKey+":notfound", isNotFound, time.Hour)
 
 		bodyBytes := unsafe.Slice(unsafe.StringData(data.Body), len(data.Body))
 		sBody := snappy.Encode(nil, bodyBytes)
 		log.Debug("body size", zap.Int("before", len(data.Body)), zap.Int("after", len(sBody)))
-		pipe.SetEx(ctx, string(key)+":body", sBody, time.Hour)
+		pipe.SetEx(ctx, redisKey+":body", sBody, time.Hour)
 		return nil
 	})
 
@@ -288,8 +290,8 @@ func (g *gateway) renderPage(ctx context.Context, id cacheId) (*pageObject, erro
 }
 
 func (g *gateway) invalidateCache(identity, uri string) {
-	withName := string(newCacheId(identity, uri, true))
-	withoutName := string(newCacheId(identity, uri, false))
+	withName := "{" + string(newCacheId(identity, uri, true)) + "}"
+	withoutName := "{" + string(newCacheId(identity, uri, false)) + "}"
 	err := g.redisClient.Del(
 		context.Background(),
 		withName+":rver",
