@@ -11,7 +11,6 @@ import (
 	"runtime/debug"
 	"strings"
 	"time"
-	"unsafe"
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
@@ -134,19 +133,22 @@ func (g *gateway) handlePage(ctx context.Context, w http.ResponseWriter, identit
 			return
 		}
 	}
+	bodyBuffer := new(bytes.Buffer)
+	teeReader := io.TeeReader(pageObj.Body, bodyBuffer)
 
 	if pageObj.IsNotFound {
 		http.NotFound(w, nil)
 	} else {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-		_, err = io.Copy(w, strings.NewReader(pageObj.Body))
+		_, err = io.Copy(w, teeReader)
 		if err != nil {
 			log.Error("page write error", zap.Error(err))
 		}
 	}
 
 	if isCacheMissed {
+		pageObj.Body = bodyBuffer
 		if err = g.cacheSet(ctx, id, pageObj); err != nil {
 			log.Error("cache set error", zap.Error(err))
 		}
@@ -173,26 +175,11 @@ func (g *gateway) cacheGet(ctx context.Context, key cacheId) (res *pageObject, e
 		}
 	}
 
-	var n int
-	var decodedBody string
 	dataBody := results[2].Val()
-	bodyBytes := unsafe.Slice(unsafe.StringData(dataBody), len(dataBody))
-
-	if n, err = snappy.DecodedLen(bodyBytes); err == nil {
-		bodyBuf := make([]byte, n)
-		var decoded []byte
-		decoded, err = snappy.Decode(bodyBuf, bodyBytes)
-		if err == nil {
-			decodedBody = unsafe.String(unsafe.SliceData(decoded), len(decoded))
-		} else {
-			return
-		}
-	} else {
-		return
-	}
+	sreader := snappy.NewReader(strings.NewReader(dataBody))
 
 	obj := &pageObject{
-		Body:       decodedBody,
+		Body:       sreader,
 		IsNotFound: results[1].Val() == "1",
 		RenderVer:  results[0].Val(),
 	}
@@ -209,9 +196,19 @@ func (g *gateway) cacheSet(ctx context.Context, key cacheId, data *pageObject) (
 		pipe.SetEx(ctx, string(key)+":rver", data.RenderVer, time.Hour)
 		pipe.SetEx(ctx, string(key)+":notfound", isNotFound, time.Hour)
 
-		bodyBytes := unsafe.Slice(unsafe.StringData(data.Body), len(data.Body))
-		sBody := snappy.Encode(nil, bodyBytes)
-		log.Debug("body size", zap.Int("before", len(data.Body)), zap.Int("after", len(sBody)))
+		var compressedBuffer bytes.Buffer
+		writer := snappy.NewBufferedWriter(&compressedBuffer)
+		_, err := io.Copy(writer, data.Body)
+		if err != nil {
+			return err
+		}
+
+		sBody := compressedBuffer.Bytes()
+		err = writer.Close()
+		if err != nil {
+			return err
+		}
+
 		pipe.SetEx(ctx, string(key)+":body", sBody, time.Hour)
 		return nil
 	})
@@ -282,7 +279,7 @@ func (g *gateway) renderPage(ctx context.Context, id cacheId) (*pageObject, erro
 		return nil, err
 	}
 	return &pageObject{
-		Body:      buf.String(),
+		Body:      buf,
 		RenderVer: g.renderVersion,
 	}, nil
 }
@@ -367,7 +364,7 @@ func (c cacheId) getElement(idx int) string {
 }
 
 type pageObject struct {
-	Body       string
+	Body       io.Reader
 	RenderVer  string
 	IsNotFound bool
 }
