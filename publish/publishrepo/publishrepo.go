@@ -24,7 +24,7 @@ func New() PublishRepo {
 }
 
 type PublishRepo interface {
-	ObjectCreate(ctx context.Context, object domain.Object, version string) (publish domain.ObjectWithPublish, err error)
+	ObjectCreate(ctx context.Context, object domain.Object, version string) (publish domain.ObjectWithPublish, prevUri string, err error)
 	ObjectDelete(ctx context.Context, object domain.Object) (uri string, err error)
 	ObjectPublishStatus(ctx context.Context, object domain.Object) (publish domain.ObjectWithPublish, err error)
 	ResolveUri(ctx context.Context, identity, uri string) (publish domain.ObjectWithPublish, err error)
@@ -96,7 +96,7 @@ func ensureIndexes(ctx context.Context, coll *mongo.Collection, indexes ...mongo
 	return
 }
 
-func (p *publishRepo) ObjectCreate(ctx context.Context, object domain.Object, version string) (publish domain.ObjectWithPublish, err error) {
+func (p *publishRepo) ObjectCreate(ctx context.Context, object domain.Object, version string) (publish domain.ObjectWithPublish, prevUri string, err error) {
 	objectId := object.Identity + "/" + object.Uri
 	err = p.db.Tx(ctx, func(ctx mongo.SessionContext) (err error) {
 		// check if we have the sharing for the space+object pair
@@ -110,6 +110,7 @@ func (p *publishRepo) ObjectCreate(ctx context.Context, object domain.Object, ve
 		if existingObject != nil {
 			// change the uri
 			if existingObject.Uri != object.Uri {
+				prevUri = existingObject.Uri
 				if err = p.changeObjectUri(ctx, existingObject, object.Uri); err != nil {
 					return
 				}

@@ -29,44 +29,47 @@ func TestPublishRepo_ObjectCreate(t *testing.T) {
 	t.Run("new publish", func(t *testing.T) {
 		fx := newFixture(t)
 		obj := newTestObj()
-		publish, err := fx.ObjectCreate(ctx, obj, "v1")
+		publish, prevUri, err := fx.ObjectCreate(ctx, obj, "v1")
 		require.NoError(t, err)
 		assertObject(t, obj, publish.Object)
 		require.NotEmpty(t, publish.Publish)
 		assert.Equal(t, "v1", publish.Publish.Version)
 		assert.NotEmpty(t, publish.Publish.Id)
 		assert.NotEmpty(t, publish.Publish.UploadKey)
+		assert.Empty(t, prevUri)
 	})
 	t.Run("update same object", func(t *testing.T) {
 		fx := newFixture(t)
 		obj := newTestObj()
-		_, err := fx.ObjectCreate(ctx, obj, "v1")
+		_, prevUri, err := fx.ObjectCreate(ctx, obj, "v1")
 		require.NoError(t, err)
 		var publish domain.ObjectWithPublish
-		publish, err = fx.ObjectCreate(ctx, obj, "v2")
+		publish, prevUri, err = fx.ObjectCreate(ctx, obj, "v2")
 		require.NoError(t, err)
 		require.NotEmpty(t, publish.Publish)
 		assert.Equal(t, "v2", publish.Publish.Version)
+		assert.Empty(t, prevUri)
 	})
 	t.Run("change uri", func(t *testing.T) {
 		fx := newFixture(t)
 		obj := newTestObj()
-		_, err := fx.ObjectCreate(ctx, obj, "v1")
+		_, prevUri, err := fx.ObjectCreate(ctx, obj, "v1")
 		require.NoError(t, err)
 		obj.Uri = "u2"
 		var publish domain.ObjectWithPublish
-		publish, err = fx.ObjectCreate(ctx, obj, "v2")
+		publish, prevUri, err = fx.ObjectCreate(ctx, obj, "v2")
 		require.NoError(t, err)
 		require.NotEmpty(t, publish.Publish)
 		assert.Equal(t, "v2", publish.Publish.Version)
+		assert.Equal(t, "u1", prevUri)
 	})
 	t.Run("change uri to the taken one", func(t *testing.T) {
 		fx := newFixture(t)
 		obj := newTestObj()
-		_, err := fx.ObjectCreate(ctx, obj, "v1")
+		_, _, err := fx.ObjectCreate(ctx, obj, "v1")
 		require.NoError(t, err)
 		obj.ObjectId = "o2"
-		_, err = fx.ObjectCreate(ctx, obj, "v2")
+		_, _, err = fx.ObjectCreate(ctx, obj, "v2")
 		require.ErrorIs(t, err, publishapi.ErrUriNotUnique)
 	})
 }
@@ -75,7 +78,7 @@ func TestPublishRepo_ObjectPublishStatus(t *testing.T) {
 	t.Run("created", func(t *testing.T) {
 		fx := newFixture(t)
 		obj := newTestObj()
-		_, err := fx.ObjectCreate(ctx, obj, "v1")
+		_, _, err := fx.ObjectCreate(ctx, obj, "v1")
 		require.NoError(t, err)
 		publish, err := fx.ObjectPublishStatus(ctx, obj)
 		require.NoError(t, err)
@@ -85,7 +88,7 @@ func TestPublishRepo_ObjectPublishStatus(t *testing.T) {
 	t.Run("published", func(t *testing.T) {
 		fx := newFixture(t)
 		obj := newTestObj()
-		publishObj, err := fx.ObjectCreate(ctx, obj, "v1")
+		publishObj, _, err := fx.ObjectCreate(ctx, obj, "v1")
 		require.NoError(t, err)
 		uploadKey := publishObj.Publish.UploadKey
 		publish, err := fx.GetPublish(ctx, publishObj.Publish.Id)

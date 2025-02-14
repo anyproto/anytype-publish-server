@@ -129,9 +129,12 @@ func (p *publishService) Publish(ctx context.Context, object domain.Object, vers
 	if object.Identity, err = p.checkIdentity(ctx); err != nil {
 		return
 	}
-	publish, err := p.repo.ObjectCreate(ctx, object, version)
+	publish, prevUri, err := p.repo.ObjectCreate(ctx, object, version)
 	if err != nil {
 		return
+	}
+	if prevUri != "" {
+		p.invalidateCache(object.Identity, prevUri)
 	}
 	return url.JoinPath(p.config.UploadUrlPrefix, publish.Publish.Id.Hex(), publish.Publish.UploadKey)
 }
