@@ -14,13 +14,13 @@ s3Store:
 networkStorePath: .
 networkUpdateIntervalSec: 300
 publish:
-  uploadUrlPrefix: "http://10.8.0.3:8383/api/upload"
+  uploadUrlPrefix: "http://127.0.0.1:8383/api/upload"
   httpApiAddr: ":8383"
   cleanupOn: true
 gateway:
   addr: ":8380"
   publishFilesUrl: "https://anytype-gobackend-test.s3.eu-central-1.amazonaws.com"
-  staticFilesUrl: "http://10.8.0.3:8380/static"
+  staticFilesUrl: "http://127.0.0.1:8380/static"
   serveStatic: true
   analyticsCode: >
     <script>console.log("sending dummy analytics from config...")</script>
