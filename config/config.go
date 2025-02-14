@@ -16,6 +16,7 @@ import (
 	"github.com/anyproto/anytype-publish-server/db"
 	"github.com/anyproto/anytype-publish-server/gateway/gatewayconfig"
 	"github.com/anyproto/anytype-publish-server/publish"
+	"github.com/anyproto/anytype-publish-server/redisprovider"
 	"github.com/anyproto/anytype-publish-server/store"
 )
 
@@ -46,6 +47,7 @@ type Config struct {
 	NetworkStorePath         string                 `yaml:"networkStorePath"`
 	NetworkUpdateIntervalSec int                    `yaml:"networkUpdateIntervalSec"`
 	Metric                   metric.Config          `yaml:"metric"`
+	Redis                    redisprovider.Config   `yaml:"redis"`
 }
 
 func (c *Config) Init(a *app.App) (err error) {
@@ -106,4 +108,8 @@ func (c *Config) GetGateway() gatewayconfig.Config {
 
 func (c *Config) GetMetric() metric.Config {
 	return c.Metric
+}
+
+func (c *Config) GetRedis() redisprovider.Config {
+	return c.Redis
 }

@@ -24,8 +24,8 @@ func New() PublishRepo {
 }
 
 type PublishRepo interface {
-	ObjectCreate(ctx context.Context, object domain.Object, version string) (publish domain.ObjectWithPublish, err error)
-	ObjectDelete(ctx context.Context, object domain.Object) (err error)
+	ObjectCreate(ctx context.Context, object domain.Object, version string) (publish domain.ObjectWithPublish, prevUri string, err error)
+	ObjectDelete(ctx context.Context, object domain.Object) (uri string, err error)
 	ObjectPublishStatus(ctx context.Context, object domain.Object) (publish domain.ObjectWithPublish, err error)
 	ResolveUri(ctx context.Context, identity, uri string) (publish domain.ObjectWithPublish, err error)
 	ResolvePublishUri(ctx context.Context, identity, uri string) (publish domain.Object, err error)
@@ -96,7 +96,7 @@ func ensureIndexes(ctx context.Context, coll *mongo.Collection, indexes ...mongo
 	return
 }
 
-func (p *publishRepo) ObjectCreate(ctx context.Context, object domain.Object, version string) (publish domain.ObjectWithPublish, err error) {
+func (p *publishRepo) ObjectCreate(ctx context.Context, object domain.Object, version string) (publish domain.ObjectWithPublish, prevUri string, err error) {
 	objectId := object.Identity + "/" + object.Uri
 	err = p.db.Tx(ctx, func(ctx mongo.SessionContext) (err error) {
 		// check if we have the sharing for the space+object pair
@@ -110,6 +110,7 @@ func (p *publishRepo) ObjectCreate(ctx context.Context, object domain.Object, ve
 		if existingObject != nil {
 			// change the uri
 			if existingObject.Uri != object.Uri {
+				prevUri = existingObject.Uri
 				if err = p.changeObjectUri(ctx, existingObject, object.Uri); err != nil {
 					return
 				}
@@ -238,13 +239,14 @@ func (p *publishRepo) ListPublishes(ctx context.Context, identity string, spaceI
 	return publishes, nil
 }
 
-func (p *publishRepo) ObjectDelete(ctx context.Context, object domain.Object) (err error) {
-	return p.db.Tx(ctx, func(ctx mongo.SessionContext) (err error) {
+func (p *publishRepo) ObjectDelete(ctx context.Context, object domain.Object) (uri string, err error) {
+	err = p.db.Tx(ctx, func(ctx mongo.SessionContext) (err error) {
 		var query = bson.D{{"identity", object.Identity}, {"spaceId", object.SpaceId}, {"objectId", object.ObjectId}}
 		var existingObject domain.Object
 		if err = p.objectsColl.FindOne(ctx, query).Decode(&existingObject); err != nil {
 			return
 		}
+		uri = existingObject.Uri
 		if _, err = p.objectsColl.DeleteOne(ctx, bson.D{{"_id", existingObject.Id}}); err != nil {
 			return
 		}
@@ -253,6 +255,7 @@ func (p *publishRepo) ObjectDelete(ctx context.Context, object domain.Object) (e
 		}
 		return
 	})
+	return
 }
 
 func (p *publishRepo) markPublishToDelete(ctx context.Context, id primitive.ObjectID) (err error) {

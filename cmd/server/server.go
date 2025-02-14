@@ -33,6 +33,7 @@ import (
 	"github.com/anyproto/anytype-publish-server/nameservice"
 	"github.com/anyproto/anytype-publish-server/publish"
 	"github.com/anyproto/anytype-publish-server/publish/publishrepo"
+	"github.com/anyproto/anytype-publish-server/redisprovider"
 	"github.com/anyproto/anytype-publish-server/store"
 
 	// import this to keep govvv in go.mod on mod tidy
@@ -111,6 +112,7 @@ func Bootstrap(a *app.App) {
 		Register(server.New()).
 		Register(account.New()).
 		Register(pool.New()).
+		Register(redisprovider.New()).
 		Register(peerservice.New()).
 		Register(coordinatorclient.New()).
 		Register(nameserviceclient.New()).
