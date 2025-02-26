@@ -15,3 +15,4 @@ jobs:
     secrets: inherit # pass all secrets
     with:
       start_redis: true
+      start_mongodb: true
