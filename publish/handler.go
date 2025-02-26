@@ -156,6 +156,7 @@ func (h httpHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		h.s.metric.RequestLog(r.Context(), "publish.upload",
 			metric.TotalDur(time.Since(st)),
 			zap.Error(err),
+			zap.String("uploadKey", r.PathValue("uploadKey")),
 		)
 	}()
 	if r.Method != http.MethodPost {

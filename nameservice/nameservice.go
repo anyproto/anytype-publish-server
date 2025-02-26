@@ -32,7 +32,7 @@ type nameService struct {
 
 func (n *nameService) Init(a *app.App) (err error) {
 	n.nnClient = a.MustComponent(nameserviceclient.CName).(nameserviceclient.AnyNsClientServiceBase)
-	n.nameCache = ocache.New(n.resolveName, ocache.WithLogger(log.Sugar()), ocache.WithGCPeriod(time.Hour), ocache.WithTTL(time.Hour))
+	n.nameCache = ocache.New(n.resolveName, ocache.WithLogger(log.Sugar()), ocache.WithGCPeriod(time.Minute), ocache.WithTTL(time.Minute*10))
 	return nil
 }
 
@@ -73,12 +73,8 @@ func (n *nameObject) Close() (err error) {
 	return nil
 }
 
-func (n *nameObject) TryClose(objectTTL time.Duration) (res bool, err error) {
-	if objectTTL > time.Hour {
-		return true, nil
-	} else {
-		return false, nil
-	}
+func (n *nameObject) TryClose(_ time.Duration) (res bool, err error) {
+	return true, nil
 }
 
 func (n *nameService) resolveName(ctx context.Context, name string) (object ocache.Object, err error) {
@@ -87,6 +83,9 @@ func (n *nameService) resolveName(ctx context.Context, name string) (object ocac
 	})
 	if err != nil {
 		return nil, err
+	}
+	if resp.Available {
+		return nil, ocache.ErrNotExists
 	}
 	return &nameObject{nsResp: resp}, nil
 }
