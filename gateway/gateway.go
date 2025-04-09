@@ -130,6 +130,7 @@ func (g *gateway) handlePage(ctx context.Context, w http.ResponseWriter, identit
 
 	if isCacheMissed {
 		if pageObj, err = g.renderPage(ctx, id); err != nil {
+			log.Error("page render error", zap.Error(err))
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
