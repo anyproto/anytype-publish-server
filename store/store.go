@@ -47,16 +47,41 @@ func (s *store) Init(a *app.App) (err error) {
 		return fmt.Errorf("s3 bucket is empty")
 	}
 
-	awsConf, err := config.LoadDefaultConfig(context.TODO())
+	var awsConf aws.Config
+	if conf.Endpoint != "" {
+		customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+			return aws.Endpoint{
+				URL:               "https://storage.googleapis.com",
+				SigningRegion:     "auto",
+				HostnameImmutable: true,
+			}, nil
+		})
+		// TODO: handle env credentials
+		if conf.Credentials.AccessKey != "" && conf.Credentials.SecretKey != "" {
+
+		}
+
+		awsConf, err = config.LoadDefaultConfig(context.TODO(),
+			config.WithRegion(conf.Region),
+			config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")),
+			config.WithEndpointResolverWithOptions(customResolver),
+		)
+
+	} else {
+		awsConf, err = config.LoadDefaultConfig(context.TODO())
+		awsConf.Region = conf.Region
+		if conf.Credentials.AccessKey != "" && conf.Credentials.SecretKey != "" {
+			awsConf.Credentials = credentials.NewStaticCredentialsProvider(conf.Credentials.AccessKey, conf.Credentials.SecretKey, "")
+		}
+
+	}
+
 	if err != nil {
 		return err
 	}
 
 	// If creds are provided in the configuration, they are directly forwarded to the client as static credentials.
-	if conf.Credentials.AccessKey != "" && conf.Credentials.SecretKey != "" {
-		awsConf.Credentials = credentials.NewStaticCredentialsProvider(conf.Credentials.AccessKey, conf.Credentials.SecretKey, "")
-	}
-	awsConf.Region = conf.Region
+
 	s.bucket = aws.String(conf.Bucket)
 	s.client = s3.NewFromConfig(awsConf)
 	log.Info("s3 started", zap.String("region", conf.Region), zap.String("bucket", *s.bucket))
