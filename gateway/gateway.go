@@ -96,7 +96,7 @@ func (g *gateway) renderPageWithNameHandler(w http.ResponseWriter, r *http.Reque
 	name := r.PathValue("name")
 	identity, err := g.getIdentity(r.Context(), name)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 	g.handlePage(r.Context(), w, identity, r.PathValue("uri"), true)
