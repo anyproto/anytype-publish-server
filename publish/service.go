@@ -8,6 +8,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -34,9 +36,12 @@ const CName = "publish.service"
 var log = logger.NewNamed(CName)
 
 const (
-	defaultLimit   = 10 << 20 // 10 Mb
-	increasedLimit = 100 << 20
+	defaultLimit         = 10 << 20 // 10 Mb
+	increasedLimit       = 100 << 20
+	anytypeInternalLimit = 1000 << 20 // 1000 Mb
 )
+
+var anytypeInternalNames = strings.Split(os.Getenv("INCREASED_LIMIT_NAMES"), ",")
 
 func New() Service {
 	return new(publishService)
@@ -234,12 +239,15 @@ func (p *publishService) uploadTar(ctx context.Context, publishId string, reader
 }
 
 func (p *publishService) getLimitByIdentity(ctx context.Context, identity string) (limit int, err error) {
-	_, err = p.nameService.ResolveIdentity(ctx, identity)
+	var name string
+	name, err = p.nameService.ResolveIdentity(ctx, identity)
 	if errors.Is(err, ocache.ErrNotExists) {
 		return defaultLimit, nil
 	} else if err != nil {
 		log.WarnCtx(ctx, "can't resolve name", zap.Error(err))
 		return defaultLimit, nil
+	} else if slices.Contains(anytypeInternalNames, name) {
+		return anytypeInternalLimit, nil
 	} else {
 		return increasedLimit, nil
 	}
