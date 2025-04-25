@@ -9,8 +9,9 @@ mongo:
   connect: mongodb://localhost:27017
   database: publish_test
 s3Store:
-  region: "eu-central-1"
-  bucket: "anytype-gobackend-test"
+  bucket: anytype-stage1-publishserver
+  endpoint: https://storage.googleapis.com
+  region: auto
 networkStorePath: .
 networkUpdateIntervalSec: 300
 publish:

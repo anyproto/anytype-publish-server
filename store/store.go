@@ -5,6 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
+	"net/http/httputil"
+	"time"
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
@@ -13,6 +16,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"go.uber.org/zap"
 )
 
@@ -27,6 +32,39 @@ func New() Store {
 const CName = "publish.store"
 
 var log = logger.NewNamed(CName)
+
+type RecalculateV4Signature struct {
+	next   http.RoundTripper
+	signer *v4.Signer
+	cfg    aws.Config
+}
+
+func (lt *RecalculateV4Signature) RoundTrip(req *http.Request) (*http.Response, error) {
+	// store for later use
+	val := req.Header.Get("Accept-Encoding")
+
+	// delete the header so the header doesn't account for in the signature
+	req.Header.Del("Accept-Encoding")
+
+	// sign with the same date
+	timeString := req.Header.Get("X-Amz-Date")
+	timeDate, _ := time.Parse("20060102T150405Z", timeString)
+
+	creds, _ := lt.cfg.Credentials.Retrieve(req.Context())
+	err := lt.signer.SignHTTP(req.Context(), creds, req, v4.GetPayloadHash(req.Context()), "s3", lt.cfg.Region, timeDate)
+	if err != nil {
+		return nil, err
+	}
+	// Reset Accept-Encoding if desired
+	req.Header.Set("Accept-Encoding", val)
+
+	fmt.Println("AfterAdjustment")
+	rrr, _ := httputil.DumpRequest(req, false)
+	fmt.Println(string(rrr))
+
+	// follows up the original round tripper
+	return lt.next.RoundTrip(req)
+}
 
 type Store interface {
 	app.Component
@@ -49,24 +87,33 @@ func (s *store) Init(a *app.App) (err error) {
 
 	var awsConf aws.Config
 	if conf.Endpoint != "" {
+		log.Debug("loading custom S3 endpoint", zap.String("endpoint", conf.Endpoint))
 		customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
 			return aws.Endpoint{
-				URL:               "https://storage.googleapis.com",
-				SigningRegion:     "auto",
+				URL:               conf.Endpoint,
+				SigningRegion:     conf.Region,
+				Source:            aws.EndpointSourceCustom,
 				HostnameImmutable: true,
 			}, nil
 		})
-		// TODO: handle env credentials
-		if conf.Credentials.AccessKey != "" && conf.Credentials.SecretKey != "" {
 
-		}
-
-		awsConf, err = config.LoadDefaultConfig(context.TODO(),
+		var opts []func(*config.LoadOptions) error
+		opts = append(opts,
 			config.WithRegion(conf.Region),
-			config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")),
 			config.WithEndpointResolverWithOptions(customResolver),
 		)
 
+		if conf.Credentials.AccessKey != "" && conf.Credentials.SecretKey != "" {
+			log.Debug("loading custom S3 credentials", zap.String("ac", conf.Credentials.AccessKey))
+			creds := credentials.NewStaticCredentialsProvider(conf.Credentials.AccessKey, conf.Credentials.SecretKey, "")
+			opts = append(opts, config.WithCredentialsProvider(creds))
+		}
+
+		awsConf, err = config.LoadDefaultConfig(context.TODO(), opts...)
+		awsConf.HTTPClient = &http.Client{Transport: &RecalculateV4Signature{http.DefaultTransport, v4.NewSigner(), awsConf}}
+
+		fmt.Printf("awsconf: %#v\n", awsConf)
+		fmt.Printf("conf: %#v\n", conf)
 	} else {
 		awsConf, err = config.LoadDefaultConfig(context.TODO())
 		awsConf.Region = conf.Region
