@@ -10,6 +10,7 @@ type Credentials struct {
 }
 
 type Config struct {
+	Endpoint    string      `yaml:"endpoint"`
 	Region      string      `yaml:"region"`
 	Bucket      string      `yaml:"bucket"`
 	Credentials Credentials `yaml:"credentials"`

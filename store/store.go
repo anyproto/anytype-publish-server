@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
@@ -13,6 +14,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"go.uber.org/zap"
 )
 
@@ -47,16 +50,46 @@ func (s *store) Init(a *app.App) (err error) {
 		return fmt.Errorf("s3 bucket is empty")
 	}
 
-	awsConf, err := config.LoadDefaultConfig(context.TODO())
+	var awsConf aws.Config
+	if conf.Endpoint != "" {
+		log.Debug("loading custom S3 endpoint", zap.String("endpoint", conf.Endpoint))
+		customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+			return aws.Endpoint{
+				URL:               conf.Endpoint,
+				SigningRegion:     conf.Region,
+				Source:            aws.EndpointSourceCustom,
+				HostnameImmutable: true,
+			}, nil
+		})
+
+		var opts []func(*config.LoadOptions) error
+		opts = append(opts,
+			config.WithRegion(conf.Region),
+			config.WithEndpointResolverWithOptions(customResolver),
+		)
+
+		if conf.Credentials.AccessKey != "" && conf.Credentials.SecretKey != "" {
+			creds := credentials.NewStaticCredentialsProvider(conf.Credentials.AccessKey, conf.Credentials.SecretKey, "")
+			opts = append(opts, config.WithCredentialsProvider(creds))
+		}
+
+		awsConf, err = config.LoadDefaultConfig(context.TODO(), opts...)
+		awsConf.HTTPClient = &http.Client{Transport: &RecalculateV4Signature{http.DefaultTransport, v4.NewSigner(), awsConf}}
+	} else {
+		awsConf, err = config.LoadDefaultConfig(context.TODO())
+		awsConf.Region = conf.Region
+		if conf.Credentials.AccessKey != "" && conf.Credentials.SecretKey != "" {
+			awsConf.Credentials = credentials.NewStaticCredentialsProvider(conf.Credentials.AccessKey, conf.Credentials.SecretKey, "")
+		}
+
+	}
+
 	if err != nil {
 		return err
 	}
 
 	// If creds are provided in the configuration, they are directly forwarded to the client as static credentials.
-	if conf.Credentials.AccessKey != "" && conf.Credentials.SecretKey != "" {
-		awsConf.Credentials = credentials.NewStaticCredentialsProvider(conf.Credentials.AccessKey, conf.Credentials.SecretKey, "")
-	}
-	awsConf.Region = conf.Region
+
 	s.bucket = aws.String(conf.Bucket)
 	s.client = s3.NewFromConfig(awsConf)
 	log.Info("s3 started", zap.String("region", conf.Region), zap.String("bucket", *s.bucket))
