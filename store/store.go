@@ -69,16 +69,12 @@ func (s *store) Init(a *app.App) (err error) {
 		)
 
 		if conf.Credentials.AccessKey != "" && conf.Credentials.SecretKey != "" {
-			log.Debug("loading custom S3 credentials", zap.String("ac", conf.Credentials.AccessKey))
 			creds := credentials.NewStaticCredentialsProvider(conf.Credentials.AccessKey, conf.Credentials.SecretKey, "")
 			opts = append(opts, config.WithCredentialsProvider(creds))
 		}
 
 		awsConf, err = config.LoadDefaultConfig(context.TODO(), opts...)
 		awsConf.HTTPClient = &http.Client{Transport: &RecalculateV4Signature{http.DefaultTransport, v4.NewSigner(), awsConf}}
-
-		fmt.Printf("awsconf: %#v\n", awsConf)
-		fmt.Printf("conf: %#v\n", conf)
 	} else {
 		awsConf, err = config.LoadDefaultConfig(context.TODO())
 		awsConf.Region = conf.Region
