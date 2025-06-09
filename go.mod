@@ -15,7 +15,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/redis/go-redis/v9 v9.7.0
 	github.com/stretchr/testify v1.10.0
-	go.mongodb.org/mongo-driver v1.17.3
+	go.mongodb.org/mongo-driver v1.17.4
 	go.uber.org/zap v1.27.0
 	gopkg.in/yaml.v3 v3.0.1
 )
