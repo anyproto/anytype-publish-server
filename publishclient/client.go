@@ -12,6 +12,7 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/net/peerservice"
 	"github.com/anyproto/any-sync/net/pool"
+	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/net/secureservice"
 	"storj.io/drpc"
 
@@ -59,6 +60,9 @@ func (p *publishClient) ResolveUri(ctx context.Context, uri string) (publish *pu
 	var resp *publishapi.ResolveUriResponse
 	err = p.doClient(ctx, func(c publishapi.DRPCWebPublisherClient) (err error) {
 		resp, err = c.ResolveUri(ctx, &publishapi.ResolveUriRequest{Uri: uri})
+		if err != nil {
+			err = rpcerr.Unwrap(err)
+		}
 		return
 	})
 	if err != nil {
@@ -71,6 +75,9 @@ func (p *publishClient) GetPublishStatus(ctx context.Context, spaceId, objectId 
 	var resp *publishapi.GetPublishStatusResponse
 	err = p.doClient(ctx, func(c publishapi.DRPCWebPublisherClient) (err error) {
 		resp, err = c.GetPublishStatus(ctx, &publishapi.GetPublishStatusRequest{SpaceId: spaceId, ObjectId: objectId})
+		if err != nil {
+			err = rpcerr.Unwrap(err)
+		}
 		return
 	})
 	if err != nil {
@@ -83,6 +90,9 @@ func (p *publishClient) Publish(ctx context.Context, req *publishapi.PublishRequ
 	var resp *publishapi.PublishResponse
 	err = p.doClient(ctx, func(c publishapi.DRPCWebPublisherClient) (err error) {
 		resp, err = c.Publish(ctx, req)
+		if err != nil {
+			err = rpcerr.Unwrap(err)
+		}
 		return
 	})
 	if err != nil {
@@ -94,6 +104,9 @@ func (p *publishClient) Publish(ctx context.Context, req *publishapi.PublishRequ
 func (p *publishClient) UnPublish(ctx context.Context, req *publishapi.UnPublishRequest) (err error) {
 	return p.doClient(ctx, func(c publishapi.DRPCWebPublisherClient) (err error) {
 		_, err = c.UnPublish(ctx, req)
+		if err != nil {
+			err = rpcerr.Unwrap(err)
+		}
 		return
 	})
 }
@@ -102,6 +115,9 @@ func (p *publishClient) ListPublishes(ctx context.Context, spaceId string) (publ
 	var resp *publishapi.ListPublishesResponse
 	err = p.doClient(ctx, func(c publishapi.DRPCWebPublisherClient) (err error) {
 		resp, err = c.ListPublishes(ctx, &publishapi.ListPublishesRequest{SpaceId: spaceId})
+		if err != nil {
+			err = rpcerr.Unwrap(err)
+		}
 		return
 	})
 	if err != nil {
