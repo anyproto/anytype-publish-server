@@ -38,7 +38,7 @@ var log = logger.NewNamed(CName)
 const (
 	defaultLimit         = 10 << 20 // 10 Mb
 	increasedLimit       = 100 << 20
-	anytypeInternalLimit = 1000 << 20 // 1000 Mb
+	anytypeInternalLimit = 6000 << 20
 )
 
 var anytypeInternalNames = strings.Split(os.Getenv("INCREASED_LIMIT_NAMES"), ",")

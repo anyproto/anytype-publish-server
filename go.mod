@@ -5,7 +5,7 @@ go 1.23.2
 require (
 	github.com/ahmetb/govvv v0.3.0
 	github.com/anyproto/any-sync v0.8.5
-	github.com/anyproto/anytype-publish-renderer v0.3.15
+	github.com/anyproto/anytype-publish-renderer v0.3.17
 	github.com/anyproto/anytype-publish-server/publishclient v0.0.0-20250131145601-de288583ff2a
 	github.com/aws/aws-sdk-go-v2 v1.36.3
 	github.com/aws/aws-sdk-go-v2/config v1.29.14
