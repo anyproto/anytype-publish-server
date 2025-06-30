@@ -38,7 +38,7 @@ var log = logger.NewNamed(CName)
 const (
 	defaultLimit         = 10 << 20 // 10 Mb
 	increasedLimit       = 100 << 20
-	anytypeInternalLimit = 1000 << 20 // 1000 Mb
+	anytypeInternalLimit = 6000 << 20
 )
 
 var anytypeInternalNames = strings.Split(os.Getenv("INCREASED_LIMIT_NAMES"), ",")
@@ -240,7 +240,9 @@ func (p *publishService) uploadTar(ctx context.Context, publishId string, reader
 
 func (p *publishService) getLimitByIdentity(ctx context.Context, identity string) (limit int, err error) {
 	var name string
+
 	name, err = p.nameService.ResolveIdentity(ctx, identity)
+	log.Info("get limit name", zap.String("name", name))
 	if errors.Is(err, ocache.ErrNotExists) {
 		return defaultLimit, nil
 	} else if err != nil {
