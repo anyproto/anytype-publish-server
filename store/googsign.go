@@ -1,33 +1,72 @@
 package store
 
 import (
-	"net/http"
-	"time"
+	"context"
+	"fmt"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/smithy-go/middleware"
+	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-type RecalculateV4Signature struct {
-	next   http.RoundTripper
-	signer *v4.Signer
-	cfg    aws.Config
+// ignoreSigningHeaders excludes the listed headers
+// from the request signature because some providers may alter them.
+//
+// See https://github.com/aws/aws-sdk-go-v2/issues/1816.
+func ignoreSigningHeaders(o *s3.Options, headers []string) {
+	o.APIOptions = append(o.APIOptions, func(stack *middleware.Stack) error {
+		if err := stack.Finalize.Insert(ignoreHeaders(headers), "Signing", middleware.Before); err != nil {
+			return err
+		}
+
+		if err := stack.Finalize.Insert(restoreIgnored(), "Signing", middleware.After); err != nil {
+			return err
+		}
+
+		return nil
+	})
 }
 
-func (lt *RecalculateV4Signature) RoundTrip(req *http.Request) (*http.Response, error) {
-	val := req.Header.Get("Accept-Encoding")
-	req.Header.Del("Accept-Encoding")
+type ignoredHeadersKey struct{}
 
-	timeString := req.Header.Get("X-Amz-Date")
-	timeDate, _ := time.Parse("20060102T150405Z", timeString)
+func ignoreHeaders(headers []string) middleware.FinalizeMiddleware {
+	return middleware.FinalizeMiddlewareFunc(
+		"IgnoreHeaders",
+		func(ctx context.Context, in middleware.FinalizeInput, next middleware.FinalizeHandler) (out middleware.FinalizeOutput, metadata middleware.Metadata, err error) {
+			req, ok := in.Request.(*smithyhttp.Request)
+			if !ok {
+				return out, metadata, &v4.SigningError{Err: fmt.Errorf("(ignoreHeaders) unexpected request middleware type %T", in.Request)}
+			}
 
-	creds, _ := lt.cfg.Credentials.Retrieve(req.Context())
-	err := lt.signer.SignHTTP(req.Context(), creds, req, v4.GetPayloadHash(req.Context()), "s3", lt.cfg.Region, timeDate)
-	if err != nil {
-		return nil, err
-	}
+			ignored := make(map[string]string, len(headers))
+			for _, h := range headers {
+				ignored[h] = req.Header.Get(h)
+				req.Header.Del(h)
+			}
 
-	req.Header.Set("Accept-Encoding", val)
+			ctx = middleware.WithStackValue(ctx, ignoredHeadersKey{}, ignored)
 
-	return lt.next.RoundTrip(req)
+			return next.HandleFinalize(ctx, in)
+		},
+	)
+}
+
+func restoreIgnored() middleware.FinalizeMiddleware {
+	return middleware.FinalizeMiddlewareFunc(
+		"RestoreIgnored",
+		func(ctx context.Context, in middleware.FinalizeInput, next middleware.FinalizeHandler) (out middleware.FinalizeOutput, metadata middleware.Metadata, err error) {
+			req, ok := in.Request.(*smithyhttp.Request)
+			if !ok {
+				return out, metadata, &v4.SigningError{Err: fmt.Errorf("(restoreIgnored) unexpected request middleware type %T", in.Request)}
+			}
+
+			ignored, _ := middleware.GetStackValue(ctx, ignoredHeadersKey{}).(map[string]string)
+			for k, v := range ignored {
+				req.Header.Set(k, v)
+			}
+
+			return next.HandleFinalize(ctx, in)
+		},
+	)
 }
