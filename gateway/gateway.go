@@ -280,6 +280,12 @@ func (g *gateway) renderPage(ctx context.Context, id cacheId) (*pageObject, erro
 		return nil, err
 	}
 
+	linkObjectIds := rend.GetLinkObjectIds()
+	objectIdToUrl, err := g.getObjectIdToUrl(ctx, linkObjectIds)
+	if err == nil {
+		rend.SetUrlRewriteMap(objectIdToUrl)
+	}
+
 	var buf = bytes.NewBuffer(make([]byte, 0, 5*1024))
 	if err = rend.Render(buf); err != nil {
 		return nil, err
@@ -290,6 +296,29 @@ func (g *gateway) renderPage(ctx context.Context, id cacheId) (*pageObject, erro
 	}, nil
 }
 
+func (g *gateway) getObjectIdToUrl(ctx context.Context, linkObjectIds []string) (map[string]string, error) {
+	var objectIdToUrl map[string]string
+	if len(linkObjectIds) > 0 {
+		publishes, err := g.publish.GetPublishesByObjectIds(ctx, linkObjectIds)
+		if err != nil {
+			return nil, err
+		}
+		objectIdToUrl = make(map[string]string, len(publishes))
+		for _, publish := range publishes {
+			var url string
+			anyname, err := g.nameService.ResolveIdentity(ctx, publish.Identity)
+			// TODO: move to config
+			if err != nil {
+				url = fmt.Sprintf("https://any.coop/%s/%s", publish.Identity, publish.Uri)
+			} else {
+				url = fmt.Sprintf("https://%s.any.org/%s", anyname, publish.Uri)
+			}
+			objectIdToUrl[publish.ObjectId] = url
+		}
+	}
+	return objectIdToUrl, nil
+
+}
 func (g *gateway) invalidateCache(identity, uri string) {
 	withName := "{" + string(newCacheId(identity, uri, true)) + "}"
 	withoutName := "{" + string(newCacheId(identity, uri, false)) + "}"
