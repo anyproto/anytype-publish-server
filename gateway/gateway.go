@@ -280,6 +280,8 @@ func (g *gateway) renderPage(ctx context.Context, id cacheId) (*pageObject, erro
 		return nil, err
 	}
 
+	// TODO: url maps are not updated in cache,
+	// invalidate cache somehow
 	linkObjectIds := rend.GetLinkObjectIds()
 	objectIdToUrl, err := g.getObjectIdToUrl(ctx, linkObjectIds)
 	if err == nil {
@@ -311,7 +313,7 @@ func (g *gateway) getObjectIdToUrl(ctx context.Context, linkObjectIds []string) 
 			if err != nil {
 				url = fmt.Sprintf("https://any.coop/%s/%s", publish.Identity, publish.Uri)
 			} else {
-				url = fmt.Sprintf("https://%s.any.org/%s", anyname, publish.Uri)
+				url = fmt.Sprintf("https://%s.org/%s", anyname, publish.Uri)
 			}
 			objectIdToUrl[publish.ObjectId] = url
 		}
