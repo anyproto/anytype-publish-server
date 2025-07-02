@@ -111,6 +111,33 @@ func TestPublishRepo_ObjectPublishStatus(t *testing.T) {
 	})
 }
 
+func TestPublishRepo_GetPublishes(t *testing.T) {
+	t.Run("publishes by objectid", func(t *testing.T) {
+		fx := newFixture(t)
+		obj := newTestObj()
+		publishObj, _, err := fx.ObjectCreate(ctx, obj, "v1")
+		require.NoError(t, err)
+		uploadKey := publishObj.Publish.UploadKey
+		publish, err := fx.GetPublish(ctx, publishObj.Publish.Id)
+		require.NoError(t, err)
+		assert.Equal(t, publish.Publish.UploadKey, uploadKey)
+		publish.Publish.Size = 123
+		publish.Publish.Status = domain.PublishStatusPublished
+		require.NoError(t, fx.FinalizePublish(ctx, publish))
+		publishObj, err = fx.ObjectPublishStatus(ctx, obj)
+		require.NoError(t, err)
+		require.NotNil(t, publishObj.Publish)
+		assert.Equal(t, domain.PublishStatusPublished, publishObj.Publish.Status)
+		assert.Equal(t, int64(123), publishObj.Publish.Size)
+
+		publishes, err := fx.GetPublishesByObjectIds(ctx, []string{obj.ObjectId})
+		require.NoError(t, err)
+		require.Len(t, publishes, 1)
+		assert.Equal(t, "o1", publishes[0].ObjectId)
+		assert.Equal(t, domain.PublishStatusPublished, publishes[0].Publish.Status)
+	})
+}
+
 func TestPublishRepo_IterateReadyToDeleteIds(t *testing.T) {
 	fx := newFixture(t)
 	docs := []any{

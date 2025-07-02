@@ -50,6 +50,7 @@ func New() Service {
 type Service interface {
 	ResolveUriWithIdentity(ctx context.Context, name, uri string) (publish domain.Object, err error)
 	SetInvalidateCacheCallback(f func(identity, uri string))
+	GetPublishesByObjectIds(ctx context.Context, objectIds []string) ([]domain.ObjectWithPublish, error)
 	app.ComponentRunnable
 }
 
@@ -162,6 +163,10 @@ func (p *publishService) ListPublishes(ctx context.Context, spaceId string) (lis
 		return
 	}
 	return p.repo.ListPublishes(ctx, identity, spaceId)
+}
+
+func (p *publishService) GetPublishesByObjectIds(ctx context.Context, objectIds []string) ([]domain.ObjectWithPublish, error) {
+	return p.repo.GetPublishesByObjectIds(ctx, objectIds)
 }
 
 func (p *publishService) UploadTar(ctx context.Context, publishId, uploadKey string, reader io.Reader) (resultUrl string, err error) {
