@@ -311,7 +311,7 @@ func (g *gateway) getObjectIdToUrl(ctx context.Context, linkObjectIds []string) 
 			anyname, err := g.nameService.ResolveIdentity(ctx, publish.Identity)
 			// TODO: move to config
 			if err != nil {
-				url = fmt.Sprintf("https://any.coop/%s/%s", publish.Identity, publish.Uri)
+				url = fmt.Sprintf("%s/%s/%s",g.config.SelfURL, publish.Identity, publish.Uri)
 			} else {
 				url = fmt.Sprintf("https://%s.org/%s", anyname, publish.Uri)
 			}
