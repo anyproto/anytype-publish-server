@@ -71,7 +71,6 @@ func (g *gateway) Init(a *app.App) (err error) {
 	if g.config.ServeStatic {
 		g.mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 	}
-	g.mux.Handle("/embed/", http.StripPrefix("/embed/", http.FileServer(http.Dir("./embed"))))
 	g.mux.HandleFunc(`/name/{name}/{uri...}`, g.renderPageWithNameHandler)
 	g.mux.HandleFunc("/{identity}/{uri...}", g.renderPageHandler)
 	g.server = &http.Server{Addr: g.config.Addr, Handler: g.mux}
