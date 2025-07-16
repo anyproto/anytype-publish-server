@@ -132,7 +132,7 @@ func toPublish(obj domain.ObjectWithPublish) *publishapi.Publish {
 		if obj.Publish.Status == domain.PublishStatusPublished {
 			publish.Status = publishapi.PublishStatus_PublishStatusPublished
 			publish.Version = obj.Publish.Version
-			publish.Size_ = obj.Publish.Size
+			publish.Size = obj.Publish.Size
 		}
 	}
 	return publish
