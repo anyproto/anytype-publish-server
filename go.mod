@@ -14,7 +14,7 @@ require (
 	github.com/aws/smithy-go v1.22.4
 	github.com/golang/snappy v1.0.0
 	github.com/google/uuid v1.6.0
-	github.com/redis/go-redis/v9 v9.7.0
+	github.com/redis/go-redis/v9 v9.11.0
 	github.com/stretchr/testify v1.10.0
 	go.mongodb.org/mongo-driver v1.17.3
 	go.uber.org/zap v1.27.0
