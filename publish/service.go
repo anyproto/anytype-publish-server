@@ -131,7 +131,7 @@ func (p *publishService) GetPublishStatus(ctx context.Context, spaceId string, o
 	return p.repo.ObjectPublishStatus(ctx, obj)
 }
 
-func (p *publishService) Publish(ctx context.Context, object domain.Object, version string) (uploadUrl string, err error) {
+func (p *publishService) Publish(ctx context.Context, object domain.Object, version string, backlinks []string) (uploadUrl string, err error) {
 	if object.Identity, err = p.checkIdentity(ctx); err != nil {
 		return
 	}
@@ -140,6 +140,7 @@ func (p *publishService) Publish(ctx context.Context, object domain.Object, vers
 		return
 	}
 	if prevUri != "" {
+		// TODO: invalidate backlinks, check identity
 		p.invalidateCache(object.Identity, prevUri)
 	}
 	return url.JoinPath(p.config.UploadUrlPrefix, publish.Publish.Id.Hex(), publish.Publish.UploadKey)
