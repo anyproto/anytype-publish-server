@@ -129,3 +129,5 @@ replace github.com/anyproto/anytype-publish-server/publishclient => ./publishcli
 replace gopkg.in/Graylog2/go-gelf.v2 => github.com/anyproto/go-gelf v0.0.0-20210418191311-774bd5b016e7
 
 replace github.com/btcsuite/btcutil => github.com/btcsuite/btcd/btcutil v1.1.5
+
+replace github.com/anyproto/anytype-publish-renderer => ../anytype-publish-renderer

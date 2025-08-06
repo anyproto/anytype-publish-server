@@ -60,6 +60,7 @@ message PublishRequest {
   string objectId = 2;
   string uri = 3;
   string version = 4;
+  repeated string backlinks = 5;
 }
 
 message PublishResponse {

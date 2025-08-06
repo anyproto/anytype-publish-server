@@ -442,6 +442,7 @@ type PublishRequest struct {
 	ObjectId      string                 `protobuf:"bytes,2,opt,name=objectId,proto3" json:"objectId,omitempty"`
 	Uri           string                 `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
 	Version       string                 `protobuf:"bytes,4,opt,name=version,proto3" json:"version,omitempty"`
+	Backlinks     []string               `protobuf:"bytes,5,rep,name=backlinks,proto3" json:"backlinks,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -502,6 +503,13 @@ func (x *PublishRequest) GetVersion() string {
 		return x.Version
 	}
 	return ""
+}
+
+func (x *PublishRequest) GetBacklinks() []string {
+	if x != nil {
+		return x.Backlinks
+	}
+	return nil
 }
 
 type PublishResponse struct {
@@ -710,12 +718,13 @@ const file_publishclient_publishapi_protos_publisher_proto_rawDesc = "" +
 	"\aspaceId\x18\x01 \x01(\tR\aspaceId\x12\x1a\n" +
 	"\bobjectId\x18\x02 \x01(\tR\bobjectId\"E\n" +
 	"\x18GetPublishStatusResponse\x12)\n" +
-	"\apublish\x18\x01 \x01(\v2\x0f.client.PublishR\apublish\"r\n" +
+	"\apublish\x18\x01 \x01(\v2\x0f.client.PublishR\apublish\"\x90\x01\n" +
 	"\x0ePublishRequest\x12\x18\n" +
 	"\aspaceId\x18\x01 \x01(\tR\aspaceId\x12\x1a\n" +
 	"\bobjectId\x18\x02 \x01(\tR\bobjectId\x12\x10\n" +
 	"\x03uri\x18\x03 \x01(\tR\x03uri\x12\x18\n" +
-	"\aversion\x18\x04 \x01(\tR\aversion\"/\n" +
+	"\aversion\x18\x04 \x01(\tR\aversion\x12\x1c\n" +
+	"\tbacklinks\x18\x05 \x03(\tR\tbacklinks\"/\n" +
 	"\x0fPublishResponse\x12\x1c\n" +
 	"\tuploadUrl\x18\x01 \x01(\tR\tuploadUrl\"H\n" +
 	"\x10UnPublishRequest\x12\x18\n" +

@@ -50,6 +50,7 @@ func New() Service {
 type Service interface {
 	ResolveUriWithIdentity(ctx context.Context, name, uri string) (publish domain.Object, err error)
 	SetInvalidateCacheCallback(f func(identity, uri string))
+	GetPublishesByObjectIds(ctx context.Context, objectIds []string) ([]domain.ObjectWithPublish, error)
 	app.ComponentRunnable
 }
 
@@ -130,7 +131,7 @@ func (p *publishService) GetPublishStatus(ctx context.Context, spaceId string, o
 	return p.repo.ObjectPublishStatus(ctx, obj)
 }
 
-func (p *publishService) Publish(ctx context.Context, object domain.Object, version string) (uploadUrl string, err error) {
+func (p *publishService) Publish(ctx context.Context, object domain.Object, version string, backlinks []string) (uploadUrl string, err error) {
 	if object.Identity, err = p.checkIdentity(ctx); err != nil {
 		return
 	}
@@ -139,6 +140,7 @@ func (p *publishService) Publish(ctx context.Context, object domain.Object, vers
 		return
 	}
 	if prevUri != "" {
+		// TODO: invalidate backlinks, check identity
 		p.invalidateCache(object.Identity, prevUri)
 	}
 	return url.JoinPath(p.config.UploadUrlPrefix, publish.Publish.Id.Hex(), publish.Publish.UploadKey)
@@ -162,6 +164,10 @@ func (p *publishService) ListPublishes(ctx context.Context, spaceId string) (lis
 		return
 	}
 	return p.repo.ListPublishes(ctx, identity, spaceId)
+}
+
+func (p *publishService) GetPublishesByObjectIds(ctx context.Context, objectIds []string) ([]domain.ObjectWithPublish, error) {
+	return p.repo.GetPublishesByObjectIds(ctx, objectIds)
 }
 
 func (p *publishService) UploadTar(ctx context.Context, publishId, uploadKey string, reader io.Reader) (resultUrl string, err error) {
