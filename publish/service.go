@@ -49,7 +49,7 @@ func New() Service {
 
 type Service interface {
 	ResolveUriWithIdentity(ctx context.Context, name, uri string) (publish domain.Object, err error)
-	SetInvalidateCacheCallback(f func(identity, uri string))
+	SetInvalidateCacheCallback(f func(identity, uri string, backlinks []string))
 	GetPublishesByObjectIds(ctx context.Context, objectIds []string) ([]domain.ObjectWithPublish, error)
 	app.ComponentRunnable
 }
@@ -62,7 +62,7 @@ type publishService struct {
 	ticker         periodicsync.PeriodicSync
 	nameService    nameservice.NameService
 	metric         metric.Metric
-	invalidateFunc func(identity string, uri string)
+	invalidateFunc func(identity string, uri string, backlinks []string)
 }
 
 func (p *publishService) Init(a *app.App) (err error) {
@@ -100,13 +100,13 @@ func (p *publishService) Name() (name string) {
 	return CName
 }
 
-func (p *publishService) SetInvalidateCacheCallback(f func(identity, uri string)) {
+func (p *publishService) SetInvalidateCacheCallback(f func(identity, uri string, backlinks []string)) {
 	p.invalidateFunc = f
 }
 
-func (p *publishService) invalidateCache(identity, uri string) {
+func (p *publishService) invalidateCache(identity, uri string, backlinks []string) {
 	if p.invalidateFunc != nil {
-		p.invalidateFunc(identity, uri)
+		p.invalidateFunc(identity, uri, backlinks)
 	}
 }
 
@@ -141,7 +141,8 @@ func (p *publishService) Publish(ctx context.Context, object domain.Object, vers
 	}
 	if prevUri != "" {
 		// TODO: invalidate backlinks, check identity
-		p.invalidateCache(object.Identity, prevUri)
+		// im
+		p.invalidateCache(object.Identity, prevUri, backlinks)
 	}
 	return url.JoinPath(p.config.UploadUrlPrefix, publish.Publish.Id.Hex(), publish.Publish.UploadKey)
 }
@@ -154,7 +155,10 @@ func (p *publishService) UnPublish(ctx context.Context, object domain.Object) (e
 	if err != nil {
 		return err
 	}
-	p.invalidateCache(object.Identity, uri)
+	// TODO: with empty backlinks here, we keep existing backlinks as-is,
+	// which means links will point to 404 -- at least until cache is expired.
+	// It is ok, but we can desire other behavior
+	p.invalidateCache(object.Identity, uri, []string{})
 	return
 }
 

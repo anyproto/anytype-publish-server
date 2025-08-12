@@ -280,8 +280,6 @@ func (g *gateway) renderPage(ctx context.Context, id cacheId) (*pageObject, erro
 		return nil, err
 	}
 
-	// TODO: url maps are not updated in cache,
-	// invalidate cache somehow
 	linkObjectIds := rend.GetLinkObjectIds()
 	objectIdToUrl, err := g.getObjectIdToUrl(ctx, linkObjectIds)
 	if err == nil {
@@ -311,7 +309,7 @@ func (g *gateway) getObjectIdToUrl(ctx context.Context, linkObjectIds []string) 
 			anyname, err := g.nameService.ResolveIdentity(ctx, publish.Identity)
 			// TODO: move to config
 			if err != nil {
-				url = fmt.Sprintf("%s/%s/%s",g.config.SelfURL, publish.Identity, publish.Uri)
+				url = fmt.Sprintf("%s/%s/%s", g.config.SelfURL, publish.Identity, publish.Uri)
 			} else {
 				url = fmt.Sprintf("https://%s.org/%s", anyname, publish.Uri)
 			}
@@ -321,7 +319,25 @@ func (g *gateway) getObjectIdToUrl(ctx context.Context, linkObjectIds []string) 
 	return objectIdToUrl, nil
 
 }
-func (g *gateway) invalidateCache(identity, uri string) {
+func (g *gateway) invalidateCache(identity, uri string, backlinks []string) {
+	// for all backlinks:
+	//   find this object in db
+	//   get identity, uri
+	//   create keys, add to (for)
+	keysToDel := make([]string, len(backlinks))
+	publishedObjects, err := g.publish.GetPublishesByObjectIds(context.Background(), backlinks)
+	if err != nil {
+		log.Error("failed to GetPublishesByObjectIds:", zap.Error(err))
+	} else {
+		for _, publishedObject := range publishedObjects {
+			identity := publishedObject.Identity
+			uri := publishedObject.Uri
+			withName := "{" + string(newCacheId(identity, uri, true)) + "}"
+			withoutName := "{" + string(newCacheId(identity, uri, false)) + "}"
+			keysToDel = append(keysToDel, withName, withoutName)
+		}
+	}
+
 	withName := "{" + string(newCacheId(identity, uri, true)) + "}"
 	withoutName := "{" + string(newCacheId(identity, uri, false)) + "}"
 	for _, key := range []string{withName, withoutName} {
