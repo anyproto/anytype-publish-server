@@ -157,7 +157,7 @@ func (g *gateway) handlePage(ctx context.Context, w http.ResponseWriter, identit
 func (g *gateway) cacheGet(ctx context.Context, key cacheId) (res *pageObject, err error) {
 	var results = make([]*redis.StringCmd, 3)
 	_, err = g.redisClient.Pipelined(ctx, func(pipe redis.Pipeliner) error {
-		redisKey := "{" + string(key) + "}"
+		redisKey := string(key)
 		results[0] = pipe.GetEx(ctx, redisKey+":rver", time.Hour)
 		results[1] = pipe.GetEx(ctx, redisKey+":notfound", time.Hour)
 		results[2] = pipe.GetEx(ctx, redisKey+":body", time.Hour)
@@ -208,7 +208,7 @@ func (g *gateway) cacheSet(ctx context.Context, key cacheId, data *pageObject) (
 		if data.IsNotFound {
 			isNotFound = "1"
 		}
-		redisKey := "{" + string(key) + "}"
+		redisKey := string(key)
 		pipe.SetEx(ctx, redisKey+":rver", data.RenderVer, time.Hour)
 		pipe.SetEx(ctx, redisKey+":notfound", isNotFound, time.Hour)
 
@@ -320,27 +320,28 @@ func (g *gateway) getObjectIdToUrl(ctx context.Context, linkObjectIds []string) 
 
 }
 func (g *gateway) invalidateCache(identity, uri string, backlinks []string) {
-	// for all backlinks:
-	//   find this object in db
-	//   get identity, uri
-	//   create keys, add to (for)
-	keysToDel := make([]string, len(backlinks))
+	var keysToDel []string
+
 	publishedObjects, err := g.publish.GetPublishesByObjectIds(context.Background(), backlinks)
 	if err != nil {
+		keysToDel = make([]string, 2)
 		log.Error("failed to GetPublishesByObjectIds:", zap.Error(err))
 	} else {
+		keysToDel = make([]string, len(backlinks)+2)
 		for _, publishedObject := range publishedObjects {
 			identity := publishedObject.Identity
 			uri := publishedObject.Uri
-			withName := "{" + string(newCacheId(identity, uri, true)) + "}"
-			withoutName := "{" + string(newCacheId(identity, uri, false)) + "}"
+			withName := string(newCacheId(identity, uri, true))
+			withoutName := string(newCacheId(identity, uri, false))
 			keysToDel = append(keysToDel, withName, withoutName)
 		}
 	}
 
-	withName := "{" + string(newCacheId(identity, uri, true)) + "}"
-	withoutName := "{" + string(newCacheId(identity, uri, false)) + "}"
-	for _, key := range []string{withName, withoutName} {
+	withName := string(newCacheId(identity, uri, true))
+	withoutName := string(newCacheId(identity, uri, false))
+	keysToDel = append(keysToDel, withName, withoutName)
+
+	for _, key := range keysToDel {
 		err := g.redisClient.Del(
 			context.Background(),
 			key+":rver",
@@ -363,7 +364,9 @@ var cacheIdSep = string([]byte{0})
 
 func newCacheId(identity, uri string, withName bool) cacheId {
 	var res strings.Builder
+	res.WriteString("{")
 	res.WriteString(identity)
+	res.WriteString("}")
 	res.WriteString(cacheIdSep)
 	res.WriteString(uri)
 	res.WriteString(cacheIdSep)
@@ -378,7 +381,8 @@ func newCacheId(identity, uri string, withName bool) cacheId {
 type cacheId string
 
 func (c cacheId) Identity() string {
-	return c.getElement(1)
+	id := c.getElement(1)
+	return id[1 : len(id)-1]
 }
 
 func (c cacheId) Uri() string {

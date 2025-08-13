@@ -211,7 +211,8 @@ func (p *publishService) UploadTar(ctx context.Context, publishId, uploadKey str
 	if err = p.repo.FinalizePublish(ctx, objWithPub); err != nil {
 		return
 	}
-	p.invalidateCache(objWithPub.Identity, objWithPub.Uri)
+	// TODO: invalidate backlinks? maybe not, we do it upon Publish. Double-check.
+	p.invalidateCache(objWithPub.Identity, objWithPub.Uri, []string{})
 	return url.JoinPath("https://", p.gatewayConfig.Domain, publish.ObjectId)
 }
 
