@@ -49,7 +49,8 @@ func New() Service {
 
 type Service interface {
 	ResolveUriWithIdentity(ctx context.Context, name, uri string) (publish domain.Object, err error)
-	SetInvalidateCacheCallback(f func(identity, uri string))
+	SetInvalidateCacheCallback(f func(identity, uri string, backlinks []string))
+	GetPublishesByObjectIds(ctx context.Context, objectIds []string) ([]domain.ObjectWithPublish, error)
 	app.ComponentRunnable
 }
 
@@ -61,7 +62,7 @@ type publishService struct {
 	ticker         periodicsync.PeriodicSync
 	nameService    nameservice.NameService
 	metric         metric.Metric
-	invalidateFunc func(identity string, uri string)
+	invalidateFunc func(identity string, uri string, backlinks []string)
 }
 
 func (p *publishService) Init(a *app.App) (err error) {
@@ -99,13 +100,13 @@ func (p *publishService) Name() (name string) {
 	return CName
 }
 
-func (p *publishService) SetInvalidateCacheCallback(f func(identity, uri string)) {
+func (p *publishService) SetInvalidateCacheCallback(f func(identity, uri string, backlinks []string)) {
 	p.invalidateFunc = f
 }
 
-func (p *publishService) invalidateCache(identity, uri string) {
+func (p *publishService) invalidateCache(identity, uri string, backlinks []string) {
 	if p.invalidateFunc != nil {
-		p.invalidateFunc(identity, uri)
+		p.invalidateFunc(identity, uri, backlinks)
 	}
 }
 
@@ -130,7 +131,7 @@ func (p *publishService) GetPublishStatus(ctx context.Context, spaceId string, o
 	return p.repo.ObjectPublishStatus(ctx, obj)
 }
 
-func (p *publishService) Publish(ctx context.Context, object domain.Object, version string) (uploadUrl string, err error) {
+func (p *publishService) Publish(ctx context.Context, object domain.Object, version string, backlinks []string) (uploadUrl string, err error) {
 	if object.Identity, err = p.checkIdentity(ctx); err != nil {
 		return
 	}
@@ -139,7 +140,9 @@ func (p *publishService) Publish(ctx context.Context, object domain.Object, vers
 		return
 	}
 	if prevUri != "" {
-		p.invalidateCache(object.Identity, prevUri)
+		// TODO: invalidate backlinks, check identity
+		// im
+		p.invalidateCache(object.Identity, prevUri, backlinks)
 	}
 	return url.JoinPath(p.config.UploadUrlPrefix, publish.Publish.Id.Hex(), publish.Publish.UploadKey)
 }
@@ -152,7 +155,10 @@ func (p *publishService) UnPublish(ctx context.Context, object domain.Object) (e
 	if err != nil {
 		return err
 	}
-	p.invalidateCache(object.Identity, uri)
+	// TODO: with empty backlinks here, we keep existing backlinks as-is,
+	// which means links will point to 404 -- at least until cache is expired.
+	// It is ok, but we can desire other behavior
+	p.invalidateCache(object.Identity, uri, []string{})
 	return
 }
 
@@ -162,6 +168,10 @@ func (p *publishService) ListPublishes(ctx context.Context, spaceId string) (lis
 		return
 	}
 	return p.repo.ListPublishes(ctx, identity, spaceId)
+}
+
+func (p *publishService) GetPublishesByObjectIds(ctx context.Context, objectIds []string) ([]domain.ObjectWithPublish, error) {
+	return p.repo.GetPublishesByObjectIds(ctx, objectIds)
 }
 
 func (p *publishService) UploadTar(ctx context.Context, publishId, uploadKey string, reader io.Reader) (resultUrl string, err error) {
@@ -201,7 +211,8 @@ func (p *publishService) UploadTar(ctx context.Context, publishId, uploadKey str
 	if err = p.repo.FinalizePublish(ctx, objWithPub); err != nil {
 		return
 	}
-	p.invalidateCache(objWithPub.Identity, objWithPub.Uri)
+	// TODO: invalidate backlinks? maybe not, we do it upon Publish. Double-check.
+	p.invalidateCache(objWithPub.Identity, objWithPub.Uri, []string{})
 	return url.JoinPath("https://", p.gatewayConfig.Domain, publish.ObjectId)
 }
 

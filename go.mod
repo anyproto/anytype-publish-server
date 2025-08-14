@@ -7,7 +7,7 @@ toolchain go1.24.0
 require (
 	github.com/ahmetb/govvv v0.3.0
 	github.com/anyproto/any-sync v0.9.2
-	github.com/anyproto/anytype-publish-renderer v0.3.22
+	github.com/anyproto/anytype-publish-renderer v0.4.0-alpha
 	github.com/anyproto/anytype-publish-server/publishclient v0.0.0-20250716122732-cdcfe3a126bb
 	github.com/aws/aws-sdk-go-v2 v1.36.5
 	github.com/aws/aws-sdk-go-v2/config v1.29.14

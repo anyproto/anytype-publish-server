@@ -36,6 +36,7 @@ type PublishRepo interface {
 	DeletePublish(ctx context.Context, id primitive.ObjectID) (err error)
 	DeleteOutdatedPublishes(ctx context.Context, before time.Time) (deletedCount int, err error)
 	DeleteOutdatedObjects(ctx context.Context, before time.Time) (deletedCount int, err error)
+	GetPublishesByObjectIds(ctx context.Context, objectIds []string) (publishes []domain.ObjectWithPublish, err error)
 	app.ComponentRunnable
 }
 
@@ -375,6 +376,38 @@ func (p *publishRepo) DeleteOutdatedObjects(ctx context.Context, before time.Tim
 		return
 	}
 	return int(res.DeletedCount), nil
+}
+
+func (p *publishRepo) GetPublishesByObjectIds(ctx context.Context, objectIds []string) ([]domain.ObjectWithPublish, error) {
+	filter := bson.D{
+		{"objectId", bson.D{
+			{"$in", objectIds},
+		}},
+	}
+
+	cur, err := p.objectsColl.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = cur.Close(ctx)
+	}()
+	var publishes []domain.ObjectWithPublish
+	for cur.Next(ctx) {
+		var publish domain.ObjectWithPublish
+		if err = cur.Decode(&publish.Object); err != nil {
+			return nil, err
+		}
+		if publish.ActivePublishId != nil {
+			_ = p.publishColl.FindOne(ctx, bson.D{{"_id", *publish.ActivePublishId}}).Decode(&publish.Publish)
+		}
+		if publish.Publish.Status == domain.PublishStatusPublished {
+			publishes = append(publishes, publish)
+		}
+
+	}
+	return publishes, nil
+
 }
 
 func (p *publishRepo) Close(ctx context.Context) (err error) {

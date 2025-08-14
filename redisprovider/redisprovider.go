@@ -49,7 +49,9 @@ func (r *redisProvider) Name() (name string) {
 }
 
 func (r *redisProvider) Run(ctx context.Context) (err error) {
-	return r.redis.Ping(ctx).Err()
+	// return r.redis.Ping(ctx).Err()
+	// disable cache for now
+	return nil
 }
 
 func (r *redisProvider) Redis() redis.UniversalClient {

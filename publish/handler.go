@@ -72,7 +72,7 @@ func (r rpcHandler) Publish(ctx context.Context, req *publishapi.PublishRequest)
 		)
 	}()
 
-	uploadUrl, err := r.s.Publish(ctx, domain.Object{SpaceId: req.SpaceId, ObjectId: req.ObjectId, Uri: req.Uri}, req.Version)
+	uploadUrl, err := r.s.Publish(ctx, domain.Object{SpaceId: req.SpaceId, ObjectId: req.ObjectId, Uri: req.Uri}, req.Version, req.Backlinks)
 	if err != nil {
 		return nil, err
 	}
