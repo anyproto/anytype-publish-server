@@ -18,6 +18,13 @@ publish:
   uploadUrlPrefix: "http://127.0.0.1:8383/api/upload"
   httpApiAddr: ":8383"
   cleanupOn: true
+  # Limits and URL templates returned to clients. Defaults are used if omitted.
+  # membershipLimit: 6291456000   # 6000 MB in bytes
+  # defaultLimit: 10485760         # 10 MB in bytes
+  # baseUrlTemplate: "https://any.coop/%s"
+  # inviteLinkUrlTemplate: "https://invite.any.coop/%s#%s"
+  # memberUrlTemplate: "https://%s.org"
+  # indexFileName: "index.json.gz"
 gateway:
   addr: ":8380"
   publishFilesUrl: "https://anytype-gobackend-test.s3.eu-central-1.amazonaws.com"
