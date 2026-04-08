@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/net/peerservice"
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
@@ -19,6 +20,8 @@ import (
 	"github.com/anyproto/anytype-publish-server/publishclient/publishapi"
 )
 
+var log = logger.NewNamed(CName)
+
 func New() Client {
 	return new(publishClient)
 }
@@ -26,8 +29,9 @@ func New() Client {
 const CName = "publish.client"
 
 type Client interface {
-	app.Component
+	app.ComponentRunnable
 	ResolveUri(ctx context.Context, uri string) (publish *publishapi.Publish, err error)
+	GetPublishConfig(ctx context.Context, req *publishapi.GetConfigRequest) (resp *publishapi.GetConfigResponse, err error)
 	GetPublishStatus(ctx context.Context, spaceId, objectId string) (publish *publishapi.Publish, err error)
 	Publish(ctx context.Context, req *publishapi.PublishRequest) (uploadUrl string, err error)
 	UnPublish(ctx context.Context, req *publishapi.UnPublishRequest) (err error)
@@ -36,9 +40,10 @@ type Client interface {
 }
 
 type publishClient struct {
-	pool        pool.Pool
-	peerService peerservice.PeerService
-	peerIds     []string
+	pool          pool.Pool
+	peerService   peerservice.PeerService
+	peerIds       []string
+	publishConfig *publishapi.GetConfigResponse
 }
 
 func (p *publishClient) Init(a *app.App) (err error) {
@@ -54,6 +59,25 @@ func (p *publishClient) Init(a *app.App) (err error) {
 
 func (p *publishClient) Name() (name string) {
 	return CName
+}
+
+func (p *publishClient) Run(ctx context.Context) (err error) {
+	return nil
+}
+
+func (p *publishClient) Close(_ context.Context) error {
+	return nil
+}
+
+func (p *publishClient) GetPublishConfig(ctx context.Context, req *publishapi.GetConfigRequest) (resp *publishapi.GetConfigResponse, err error) {
+	err = p.doClient(ctx, func(c publishapi.DRPCWebPublisherClient) (err error) {
+		resp, err = c.GetConfig(ctx, req)
+		if err != nil {
+			err = rpcerr.Unwrap(err)
+		}
+		return
+	})
+	return
 }
 
 func (p *publishClient) ResolveUri(ctx context.Context, uri string) (publish *publishapi.Publish, err error) {

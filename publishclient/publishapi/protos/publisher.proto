@@ -24,6 +24,7 @@ service WebPublisher {
   rpc Publish(PublishRequest) returns (PublishResponse);
   rpc UnPublish(UnPublishRequest) returns (Ok);
   rpc ListPublishes(ListPublishesRequest) returns (ListPublishesResponse);
+  rpc GetConfig(GetConfigRequest) returns (GetConfigResponse);
 }
 
 message ResolveUriRequest {
@@ -77,4 +78,15 @@ message ListPublishesRequest {
 
 message ListPublishesResponse {
   repeated Publish publishes = 1;
+}
+
+message GetConfigRequest {}
+
+message GetConfigResponse {
+  int64 membershipLimit = 1;
+  int64 defaultLimit = 2;
+  string baseUrlTemplate = 3;
+  string inviteLinkUrlTemplate = 4;
+  string memberUrlTemplate = 5;
+  string indexFileName = 6;
 }
