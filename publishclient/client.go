@@ -29,7 +29,7 @@ func New() Client {
 const CName = "publish.client"
 
 type Client interface {
-	app.ComponentRunnable
+	app.Component
 	ResolveUri(ctx context.Context, uri string) (publish *publishapi.Publish, err error)
 	GetPublishConfig(ctx context.Context, req *publishapi.GetConfigRequest) (resp *publishapi.GetConfigResponse, err error)
 	GetPublishStatus(ctx context.Context, spaceId, objectId string) (publish *publishapi.Publish, err error)
@@ -59,14 +59,6 @@ func (p *publishClient) Init(a *app.App) (err error) {
 
 func (p *publishClient) Name() (name string) {
 	return CName
-}
-
-func (p *publishClient) Run(ctx context.Context) (err error) {
-	return nil
-}
-
-func (p *publishClient) Close(_ context.Context) error {
-	return nil
 }
 
 func (p *publishClient) GetPublishConfig(ctx context.Context, req *publishapi.GetConfigRequest) (resp *publishapi.GetConfigResponse, err error) {
