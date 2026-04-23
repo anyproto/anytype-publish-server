@@ -11,6 +11,8 @@ github.com/anyproto/any-store v0.4.6 h1:opnTUGfuHa/VA9Incu6iLEy3WsQ4mb2o1oAXGDys
 github.com/anyproto/any-store v0.4.6/go.mod h1:Npi35qMUVZ8ouiV4o9AqpZDs6LbDOF+5ZLlVijXofFM=
 github.com/anyproto/any-sync v0.11.20 h1:/yv38s5KJh1A9SmYj1zD5k8Fqp1v0UZae3n8KNBd5Z0=
 github.com/anyproto/any-sync v0.11.20/go.mod h1:qR5leKtd4j6cnmFiaI4ULe+Az3qjhKpdFtScV7aFCHY=
+github.com/anyproto/any-sync v0.12.1 h1:F4X8s0GQ0cEl1RF/vnMh2vEKITpRt2GczMPrYFiY1A8=
+github.com/anyproto/any-sync v0.12.1/go.mod h1:ScX5Hz1vN66DeeSiagWdHgo7hyAspniaXEqvyjM7ud8=
 github.com/anyproto/anytype-heart v0.48.4 h1:tnOjICZtT+BYIliruQBPVdfmCq4Aht9ckVwcvdPXQjk=
 github.com/anyproto/anytype-heart v0.48.4/go.mod h1:y9YhUmq127YfhzO6WmcBeKyTJpKRudCdCAkh75WzpZ0=
 github.com/anyproto/anytype-publish-renderer v0.3.24 h1:5qKalt1IIhaO1CORtQ6W3Dv43popDw8LYsjGKqrKh/I=
