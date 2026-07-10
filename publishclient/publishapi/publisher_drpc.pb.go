@@ -38,6 +38,7 @@ type DRPCWebPublisherClient interface {
 	Publish(ctx context.Context, in *PublishRequest) (*PublishResponse, error)
 	UnPublish(ctx context.Context, in *UnPublishRequest) (*Ok, error)
 	ListPublishes(ctx context.Context, in *ListPublishesRequest) (*ListPublishesResponse, error)
+	GetConfig(ctx context.Context, in *GetConfigRequest) (*GetConfigResponse, error)
 }
 
 type drpcWebPublisherClient struct {
@@ -95,12 +96,22 @@ func (c *drpcWebPublisherClient) ListPublishes(ctx context.Context, in *ListPubl
 	return out, nil
 }
 
+func (c *drpcWebPublisherClient) GetConfig(ctx context.Context, in *GetConfigRequest) (*GetConfigResponse, error) {
+	out := new(GetConfigResponse)
+	err := c.cc.Invoke(ctx, "/client.WebPublisher/GetConfig", drpcEncoding_File_publishclient_publishapi_protos_publisher_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCWebPublisherServer interface {
 	ResolveUri(context.Context, *ResolveUriRequest) (*ResolveUriResponse, error)
 	GetPublishStatus(context.Context, *GetPublishStatusRequest) (*GetPublishStatusResponse, error)
 	Publish(context.Context, *PublishRequest) (*PublishResponse, error)
 	UnPublish(context.Context, *UnPublishRequest) (*Ok, error)
 	ListPublishes(context.Context, *ListPublishesRequest) (*ListPublishesResponse, error)
+	GetConfig(context.Context, *GetConfigRequest) (*GetConfigResponse, error)
 }
 
 type DRPCWebPublisherUnimplementedServer struct{}
@@ -125,9 +136,13 @@ func (s *DRPCWebPublisherUnimplementedServer) ListPublishes(context.Context, *Li
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCWebPublisherUnimplementedServer) GetConfig(context.Context, *GetConfigRequest) (*GetConfigResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCWebPublisherDescription struct{}
 
-func (DRPCWebPublisherDescription) NumMethods() int { return 5 }
+func (DRPCWebPublisherDescription) NumMethods() int { return 6 }
 
 func (DRPCWebPublisherDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -176,6 +191,15 @@ func (DRPCWebPublisherDescription) Method(n int) (string, drpc.Encoding, drpc.Re
 						in1.(*ListPublishesRequest),
 					)
 			}, DRPCWebPublisherServer.ListPublishes, true
+	case 5:
+		return "/client.WebPublisher/GetConfig", drpcEncoding_File_publishclient_publishapi_protos_publisher_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCWebPublisherServer).
+					GetConfig(
+						ctx,
+						in1.(*GetConfigRequest),
+					)
+			}, DRPCWebPublisherServer.GetConfig, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -259,6 +283,22 @@ type drpcWebPublisher_ListPublishesStream struct {
 }
 
 func (x *drpcWebPublisher_ListPublishesStream) SendAndClose(m *ListPublishesResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_publishclient_publishapi_protos_publisher_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCWebPublisher_GetConfigStream interface {
+	drpc.Stream
+	SendAndClose(*GetConfigResponse) error
+}
+
+type drpcWebPublisher_GetConfigStream struct {
+	drpc.Stream
+}
+
+func (x *drpcWebPublisher_GetConfigStream) SendAndClose(m *GetConfigResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_publishclient_publishapi_protos_publisher_proto{}); err != nil {
 		return err
 	}

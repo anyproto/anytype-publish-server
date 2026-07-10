@@ -17,6 +17,52 @@ import (
 
 var _ publishapi.DRPCWebPublisherServer = (*rpcHandler)(nil)
 
+func (r rpcHandler) GetConfig(ctx context.Context, _ *publishapi.GetConfigRequest) (resp *publishapi.GetConfigResponse, err error) {
+	st := time.Now()
+	defer func() {
+		r.s.metric.RequestLog(ctx, "publish.getConfig",
+			metric.TotalDur(time.Since(st)),
+			zap.String("addr", peer.CtxPeerAddr(ctx)),
+			zap.Error(err),
+		)
+	}()
+
+	cfg := r.s.config
+	membershipLimit := cfg.MembershipLimit
+	if membershipLimit == 0 {
+		membershipLimit = DefaultMembershipLimit
+	}
+	defaultLimit := cfg.DefaultLimit
+	if defaultLimit == 0 {
+		defaultLimit = DefaultDefaultLimit
+	}
+	baseUrlTemplate := cfg.BaseUrlTemplate
+	if baseUrlTemplate == "" {
+		baseUrlTemplate = DefaultBaseUrlTemplate
+	}
+	inviteLinkUrlTemplate := cfg.InviteLinkUrlTemplate
+	if inviteLinkUrlTemplate == "" {
+		inviteLinkUrlTemplate = DefaultInviteLinkUrlTemplate
+	}
+	memberUrlTemplate := cfg.MemberUrlTemplate
+	if memberUrlTemplate == "" {
+		memberUrlTemplate = DefaultMemberUrlTemplate
+	}
+	indexFileName := cfg.IndexFileName
+	if indexFileName == "" {
+		indexFileName = DefaultIndexFileName
+	}
+
+	return &publishapi.GetConfigResponse{
+		MembershipLimit:       membershipLimit,
+		DefaultLimit:          defaultLimit,
+		BaseUrlTemplate:       baseUrlTemplate,
+		InviteLinkUrlTemplate: inviteLinkUrlTemplate,
+		MemberUrlTemplate:     memberUrlTemplate,
+		IndexFileName:         indexFileName,
+	}, nil
+}
+
 type rpcHandler struct {
 	s *publishService
 }
